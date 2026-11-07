@@ -29,7 +29,7 @@ import {
 | ExtendedData（`Data name/value`） | ✅ |
 | KML 序列化（模型 → KML 文本） | ✅ |
 | KMZ 读写（ZIP + DEFLATE 解压 + CRC32 校验） | ✅ |
-| GeoJSON 导入与导出（RFC 7946）、GPX 1.1 导出 | ✅ |
+| GeoJSON 导入与导出（RFC 7946）、GPX 1.1 导入与导出 | ✅ |
 | 命令行：摘要 / GeoJSON / GPX 输出 | ✅ |
 | Camera / LookAt / 时间戳 / 网络链接 | 未实现（明确不做） |
 
@@ -80,7 +80,7 @@ moon run cmd/main -- examples/sample.kml --gpx
 - `serialize(doc : KmlDocument) -> String`
 - `kmz_parse(data : Bytes) -> KmlDocument raise KmlError` / `kmz_pack(doc) -> Bytes`
 - `to_geojson(doc) -> String` / `from_geojson(text) -> KmlDocument`
-- `to_gpx(doc) -> String`
+- `to_gpx(doc) -> String` / `from_gpx(text) -> KmlDocument`
 - `parse_xml(text) -> XmlElement raise KmlError`（通用 XML 子集）
 - `KmlDocument::{ name, placemarks, styles, style_maps, placemark_count(), style_count(), style_map_count(), find_style(id), find_style_map(id) }`
 - `Placemark::{ name, description, geometry, style_url, extended_data, has_geometry(), has_point(), has_line_string(), has_multi_geometry(), data_count(), find_data(name) }`

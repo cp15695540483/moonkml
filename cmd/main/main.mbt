@@ -37,6 +37,8 @@ fn run_cli(args : Array[String]) -> Int32 {
       @kml.kmz_parse(read_bytes(path))
     } else if path.has_suffix(".geojson") || path.has_suffix(".json") {
       @kml.from_geojson(read_text(path))
+    } else if path.has_suffix(".gpx") {
+      @kml.from_gpx(read_text(path))
     } else {
       @kml.parse(read_text(path))
     }

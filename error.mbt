@@ -22,6 +22,8 @@ pub(all) suberror KmlError {
   BadCoordinates(String)
   /// GeoJSON 导入失败
   BadGeoJson(String)
+  /// GPX 导入失败
+  BadGpx(String)
   /// 宿主 I/O 失败（库本身不做 I/O，由调用方转换进来）
   HostIo(String)
 }
