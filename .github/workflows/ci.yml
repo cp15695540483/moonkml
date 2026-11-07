@@ -42,3 +42,19 @@ jobs:
 
       - name: 单元测试（js）
         run: moon test --target js
+
+      - name: 安装 Python 对拍工具
+        run: python3 -m pip install --quiet simplekml
+
+      - name: 用 simplekml 生成独立实现的 KML/KMZ
+        run: python3 tools/gen_oracle.py
+
+      - name: 端到端：解析第三方 KML 与 KMZ
+        run: |
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --summary
+          moon run cmd/main --target wasm-gc -- examples/oracle.kmz --summary
+
+      - name: 端到端：GeoJSON / GPX 导出非空
+        run: |
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --geojson | grep -q '"type":"FeatureCollection"'
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --gpx | grep -q '<gpx'
