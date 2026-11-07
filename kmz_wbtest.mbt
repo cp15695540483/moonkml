@@ -67,6 +67,56 @@ test "kmz missing doc.kml raises" {
 }
 
 ///|
+test "lists multiple entries" {
+  let packed = zip_pack([
+    { name: "doc.kml", data: @utf8.encode("<kml/>"), },
+    { name: "images/icon.png", data: @utf8.encode("PNGDATA"), },
+  ])
+  let names = try! kmz_entry_names(packed)
+  assert_eq(names.length(), 2)
+  assert_eq(names[1], "images/icon.png")
+}
+
+///|
+test "extracts resource entry" {
+  let packed = zip_pack([
+    { name: "doc.kml", data: @utf8.encode("<kml/>"), },
+    { name: "images/icon.png", data: @utf8.encode("PNGDATA"), },
+  ])
+  let found = try! kmz_extract(packed, "images/icon.png")
+  match found {
+    Some(data) => assert_eq(@utf8.decode_lossy(data), "PNGDATA")
+    None => fail("expected resource")
+  }
+}
+
+///|
+test "packs document with resources" {
+  let doc = kmz_sample_doc()
+  let bytes = kmz_pack_with(doc, [
+    { name: "images/icon.png", data: @utf8.encode("PNGDATA"), },
+  ])
+  let names = try! kmz_entry_names(bytes)
+  assert_eq(names.length(), 2)
+  let back = try! kmz_parse(bytes)
+  assert_eq(back.placemark_count(), 1)
+}
+
+///|
+test "falls back to first kml when doc.kml missing" {
+  let packed = zip_pack([
+    {
+      name: "other.kml",
+      data: @utf8.encode(
+        "<kml><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+      ),
+    },
+  ])
+  let doc = try! kmz_parse(packed)
+  assert_eq(doc.placemark_count(), 1)
+}
+
+///|
 test "crc32 known vector" {
   assert_eq(crc32(@utf8.encode("123456789")), 0xCBF43926)
 }

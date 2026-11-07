@@ -24,11 +24,11 @@ import {
 | --- | --- |
 | KML 解析（XML 子集：元素、属性、文本、CDATA、注释、PI、实体引用） | ✅ |
 | 几何：Point / LineString / Polygon（外环 + 内环）/ MultiGeometry / gx:Track | ✅ |
-| Placemark `name` / `description` / `styleUrl` | ✅ |
+| Placemark `name` / `description` / `styleUrl` / Folder 路径 / TimeStamp·TimeSpan | ✅ |
 | Style（LineStyle 颜色与宽度、PolyStyle 颜色）与 StyleMap | ✅ |
 | ExtendedData（`Data name/value`） | ✅ |
 | KML 序列化（模型 → KML 文本） | ✅ |
-| KMZ 读写（ZIP + DEFLATE 解压 + CRC32 校验） | ✅ |
+| KMZ 读写（ZIP + DEFLATE + CRC32）；多条目/资源提取 | ✅ |
 | GeoJSON 导入与导出（RFC 7946）、GPX 1.1 导入与导出 | ✅ |
 | 数据校验（坐标越界、环闭合、样式悬空、gx:Track 一致性） | ✅ |
 | 命令行：摘要 / GeoJSON / GPX 输出 / 校验 | ✅ |
@@ -80,13 +80,15 @@ moon run cmd/main -- examples/sample.kml --validate
 
 - `parse(text : String) -> KmlDocument raise KmlError`
 - `serialize(doc : KmlDocument) -> String`
-- `kmz_parse(data : Bytes) -> KmlDocument raise KmlError` / `kmz_pack(doc) -> Bytes`
+- `kmz_parse(data : Bytes) -> KmlDocument` / `kmz_pack(doc) -> Bytes` / `kmz_pack_with(doc, extra)`
+- `kmz_entry_names(data) -> Array[String]` / `kmz_extract(data, name) -> Bytes?`
 - `to_geojson(doc) -> String` / `from_geojson(text) -> KmlDocument`
 - `to_gpx(doc) -> String` / `from_gpx(text) -> KmlDocument`
 - `validate(doc) -> Array[ValidationIssue]`：文档质检
 - `parse_xml(text) -> XmlElement raise KmlError`（通用 XML 子集）
 - `KmlDocument::{ name, placemarks, styles, style_maps, placemark_count(), style_count(), style_map_count(), find_style(id), find_style_map(id) }`
-- `Placemark::{ name, description, geometry, style_url, extended_data, has_geometry(), has_point(), has_line_string(), has_multi_geometry(), data_count(), find_data(name) }`
+- `Placemark::{ name, description, geometry, style_url, extended_data, folder, timestamp, has_geometry(), has_point(), has_line_string(), has_multi_geometry(), has_gx_track(), has_time(), data_count(), find_data(name) }`
+- `Placemark::new(name, geometry)`：便捷构造
 - `Geometry::{ Point(KmlPoint), LineString(KmlLineString), Polygon(KmlPolygon), MultiGeometry(Array[Geometry]), GxTrack(KmlGxTrack) }`
 - `KmlPolygon::{ outer, inner, inner_count() }`、`KmlStyle::{ id, line_color, line_width, fill_color }`
 
