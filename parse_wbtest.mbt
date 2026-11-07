@@ -28,6 +28,33 @@ fn assert_close(actual : Double, expected : Double) -> Unit raise {
 }
 
 ///|
+/// 取出 Placemark 的 Point 几何。
+fn point_of(pm : Placemark) -> KmlPoint? {
+  match pm.geometry {
+    Some(Geometry::Point(p)) => Some(p)
+    _ => None
+  }
+}
+
+///|
+/// 取出 Placemark 的 LineString 几何。
+fn line_of(pm : Placemark) -> KmlLineString? {
+  match pm.geometry {
+    Some(Geometry::LineString(ls)) => Some(ls)
+    _ => None
+  }
+}
+
+///|
+/// 取出 Placemark 的 Polygon 几何。
+fn polygon_of(pm : Placemark) -> KmlPolygon? {
+  match pm.geometry {
+    Some(Geometry::Polygon(poly)) => Some(poly)
+    _ => None
+  }
+}
+
+///|
 test "document name and placemark count" {
   let doc = try! parse(sample_kml())
   assert_eq(doc.name, "Trip")
@@ -46,7 +73,7 @@ test "first placemark fields" {
 ///|
 test "coordinates with altitude" {
   let doc = try! parse(sample_kml())
-  match doc.placemarks[0].point {
+  match point_of(doc.placemarks[0]) {
     Some(p) => {
       assert_close(p.lon, 116.3975)
       assert_close(p.lat, 39.9087)
@@ -62,7 +89,7 @@ test "coordinates with altitude" {
 ///|
 test "coordinates without altitude" {
   let doc = try! parse(sample_kml())
-  match doc.placemarks[1].point {
+  match point_of(doc.placemarks[1]) {
     Some(p) => assert_eq(p.alt is None, true)
     None => fail("expected point")
   }
@@ -83,7 +110,7 @@ test "whitespace around coordinates is trimmed" {
   let doc = try! parse(
     "<kml><Placemark><Point><coordinates> 1.5 , 2.5 </coordinates></Point></Placemark></kml>",
   )
-  match doc.placemarks[0].point {
+  match point_of(doc.placemarks[0]) {
     Some(p) => {
       assert_close(p.lon, 1.5)
       assert_close(p.lat, 2.5)
@@ -109,7 +136,7 @@ test "line string is parsed with whitespace-separated points" {
   let pm = doc.placemarks[0]
   assert_eq(pm.has_line_string(), true)
   assert_eq(pm.has_point(), false)
-  match pm.line_string {
+  match line_of(pm) {
     Some(ls) => {
       assert_eq(ls.point_count(), 3)
       assert_close(ls.points[0].lon, 0.0)
@@ -130,9 +157,44 @@ test "line string with newline-separated tuples" {
   let doc = try! parse(
     "<kml><Placemark><LineString><coordinates>1,2\n3,4\n5,6</coordinates></LineString></Placemark></kml>",
   )
-  match doc.placemarks[0].line_string {
+  match line_of(doc.placemarks[0]) {
     Some(ls) => assert_eq(ls.point_count(), 3)
     None => fail("expected line string")
+  }
+}
+
+///|
+/// 一个带洞的多边形 KML。
+fn sample_polygon_kml() -> String {
+  "<kml><Placemark><name>Zone</name>\n" +
+  "<Polygon>\n" +
+  "  <outerBoundaryIs><LinearRing><coordinates>0,0 4,0 4,4 0,4 0,0</coordinates></LinearRing></outerBoundaryIs>\n" +
+  "  <innerBoundaryIs><LinearRing><coordinates>1,1 2,1 2,2 1,2 1,1</coordinates></LinearRing></innerBoundaryIs>\n" +
+  "</Polygon>\n" +
+  "</Placemark></kml>"
+}
+
+///|
+test "polygon with outer ring and one hole" {
+  let doc = try! parse(sample_polygon_kml())
+  match polygon_of(doc.placemarks[0]) {
+    Some(poly) => {
+      assert_eq(poly.outer.point_count(), 5)
+      assert_eq(poly.inner_count(), 1)
+      assert_eq(poly.inner[0].point_count(), 5)
+    }
+    None => fail("expected polygon")
+  }
+}
+
+///|
+test "polygon without inner boundary" {
+  let doc = try! parse(
+    "<kml><Placemark><Polygon><outerBoundaryIs><LinearRing><coordinates>0,0 1,0 1,1 0,0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></kml>",
+  )
+  match polygon_of(doc.placemarks[0]) {
+    Some(poly) => assert_eq(poly.inner_count(), 0)
+    None => fail("expected polygon")
   }
 }
 

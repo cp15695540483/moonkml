@@ -1,6 +1,7 @@
-// KML 文档模型：只保留「解析 → 使用」需要的最小结构。
+// KML 文档模型。
 //
-// 目前覆盖 Point 与 LineString；面/样式在后续增量里加入，模型字段保持向后兼容。
+// 几何统一用 Geometry 枚举承载（Point / LineString / Polygon），
+// 一个 Placemark 至多一个几何；样式与扩展数据后续增量加入。
 
 ///|
 /// 一个 WGS-84 坐标点。`alt` 缺省表示 KML 未给出高度。
@@ -17,12 +18,32 @@ pub(all) struct KmlLineString {
 }
 
 ///|
-/// 一个 Placemark：名称、描述与可选的几何。
+/// 一个闭合环；KML 要求首尾点相同。
+pub(all) struct LinearRing {
+  points : Array[KmlPoint]
+}
+
+///|
+/// 一个多边形：外环 + 零或多个内环（洞）。
+pub(all) struct KmlPolygon {
+  outer : LinearRing
+  inner : Array[LinearRing]
+}
+
+///|
+/// 几何类型。
+pub(all) enum Geometry {
+  Point(KmlPoint)
+  LineString(KmlLineString)
+  Polygon(KmlPolygon)
+}
+
+///|
+/// 一个 Placemark。
 pub(all) struct Placemark {
   name : String
   description : String
-  point : KmlPoint?
-  line_string : KmlLineString?
+  geometry : Geometry?
 }
 
 ///|
@@ -39,19 +60,43 @@ pub fn KmlDocument::placemark_count(self : KmlDocument) -> Int32 {
 }
 
 ///|
+/// 是否有几何。
+pub fn Placemark::has_geometry(self : Placemark) -> Bool {
+  self.geometry is Some(_)
+}
+
+///|
 /// 是否有点几何。
 pub fn Placemark::has_point(self : Placemark) -> Bool {
-  self.point is Some(_)
+  match self.geometry {
+    Some(Geometry::Point(_)) => true
+    _ => false
+  }
 }
 
 ///|
 /// 是否有折线几何。
 pub fn Placemark::has_line_string(self : Placemark) -> Bool {
-  self.line_string is Some(_)
+  match self.geometry {
+    Some(Geometry::LineString(_)) => true
+    _ => false
+  }
 }
 
 ///|
 /// 折线的顶点数。
 pub fn KmlLineString::point_count(self : KmlLineString) -> Int32 {
   self.points.length()
+}
+
+///|
+/// 环的顶点数。
+pub fn LinearRing::point_count(self : LinearRing) -> Int32 {
+  self.points.length()
+}
+
+///|
+/// 多边形的内环数。
+pub fn KmlPolygon::inner_count(self : KmlPolygon) -> Int32 {
+  self.inner.length()
 }

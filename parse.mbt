@@ -247,6 +247,68 @@ fn parse_line_string(elem : XmlElement) -> KmlLineString? raise KmlError {
 }
 
 ///|
+/// 解析一个 LinearRing：coordinate 元组序列，首尾应闭合。
+fn parse_ring(elem : XmlElement) -> LinearRing raise KmlError {
+  match first_element(elem, "coordinates") {
+    None => raise MissingCoordinates
+    Some(coords) => {
+      let text = trim_text(coords.text())
+      let tuples = split_whitespace(text)
+      let points : Array[KmlPoint] = []
+      let mut i = 0
+      while i < tuples.length() {
+        if tuples[i] != "" {
+          points.push(parse_coordinate(tuples[i]))
+        }
+        i = i + 1
+      }
+      if points.length() < 3 {
+        raise BadCoordinates(text)
+      }
+      let ring : LinearRing = { points, }
+      ring
+    }
+  }
+}
+
+///|
+/// 解析一个 Polygon：outerBoundaryIs / innerBoundaryIs 里各一个 LinearRing。
+fn parse_polygon(elem : XmlElement) -> KmlPolygon? raise KmlError {
+  match first_element(elem, "Polygon") {
+    None => None
+    Some(poly) =>
+      match first_element(poly, "outerBoundaryIs") {
+        None => raise BadCoordinates("missing outerBoundaryIs")
+        Some(outer_boundary) =>
+          match first_element(outer_boundary, "LinearRing") {
+            None => raise BadCoordinates("missing outer LinearRing")
+            Some(outer_ring) => {
+              let inner : Array[LinearRing] = []
+              let mut i = 0
+              while i < poly.children.length() {
+                match poly.children[i] {
+                  Element(inner_boundary) =>
+                    if inner_boundary.name == "innerBoundaryIs" {
+                      match first_element(inner_boundary, "LinearRing") {
+                        Some(ring_elem) => inner.push(parse_ring(ring_elem))
+                        None =>
+                          raise BadCoordinates(
+                            "innerBoundaryIs missing LinearRing",
+                          )
+                      }
+                    }
+                  Text(_) => ()
+                }
+                i = i + 1
+              }
+              Some({ outer: parse_ring(outer_ring), inner, })
+            }
+          }
+      }
+  }
+}
+
+///|
 /// 解析一个 Placemark。
 fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
@@ -257,12 +319,19 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
     Some(t) => t
     None => ""
   }
-  {
-    name,
-    description,
-    point: parse_point(elem),
-    line_string: parse_line_string(elem),
+  let geometry : Geometry? = match parse_point(elem) {
+    Some(p) => Some(Geometry::Point(p))
+    None =>
+      match parse_line_string(elem) {
+        Some(ls) => Some(Geometry::LineString(ls))
+        None =>
+          match parse_polygon(elem) {
+            Some(poly) => Some(Geometry::Polygon(poly))
+            None => None
+          }
+      }
   }
+  { name, description, geometry, }
 }
 
 ///|
