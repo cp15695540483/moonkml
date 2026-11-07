@@ -100,6 +100,24 @@ moon run cmd/main -- examples/sample.kml --validate
 - **坐标解析**：单次除法/乘法做十进制定标，避免逐位缩放带来的多次舍入；测试用 1e-9 容差断言。
 - **ZIP 策略**：读取支持 Stored 与 DEFLATE（DEFLATE 解压复用 `moonbit-community/flate`，纯 MoonBit）；写入使用 DEFLATE + CRC32。
 
+## 演示视频
+
+[docs/demo.mp4](docs/demo.mp4)（23 秒）：真实执行 CLI、bench 与 test，展示
+
+1. 读取 simplekml 生成的真实 KMZ（DEFLATE）
+2. 导入 GPX 1.1
+3. 导出 GeoJSON
+4. 校验正常文档
+5. 校验发现环未闭合的坏数据
+6. 解析 1000 个点约 5 ms
+7. 74 个测试全绿
+
+视频由 `tools/record_demo.py` 生成（真实执行命令、捕获输出、渲染终端画面、ffmpeg 编码），可重复录制：
+
+```bash
+python tools/record_demo.py --ffmpeg <ffmpeg 路径>
+```
+
 ## 性能
 
 `moon bench benchmarks --target wasm-gc --release`（本机 Windows，wasm-gc release）：

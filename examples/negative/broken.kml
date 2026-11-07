@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 负例：外环首尾点不闭合，validate 应报告问题。 -->
+<kml>
+  <Placemark>
+    <name>Bad</name>
+    <Polygon>
+      <outerBoundaryIs>
+        <LinearRing><coordinates>0,0 1,0 1,1 0.5,0.5</coordinates></LinearRing>
+      </outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</kml>

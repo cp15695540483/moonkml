@@ -60,6 +60,15 @@ jobs:
           moon run cmd/main --target wasm-gc -- examples/oracle.kml --summary
           moon run cmd/main --target wasm-gc -- examples/oracle.kmz --summary
 
+      - name: 端到端：坏数据应被校验拦下
+        run: |
+          set +e
+          out=$(moon run cmd/main --target wasm-gc -- examples/negative/broken.kml --validate)
+          code=$?
+          echo "$out"
+          test $code -eq 1
+          echo "$out" | grep -q "ISSUE"
+
       - name: 端到端：GeoJSON / GPX 导出非空
         run: |
           moon run cmd/main --target wasm-gc -- examples/oracle.kml --geojson | grep -q '"type":"FeatureCollection"'
