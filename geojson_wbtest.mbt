@@ -14,6 +14,8 @@ fn geo_sample_doc() -> KmlDocument {
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
       {
         name: "L",
@@ -28,6 +30,8 @@ fn geo_sample_doc() -> KmlDocument {
         ),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
       {
         name: "G",
@@ -47,6 +51,8 @@ fn geo_sample_doc() -> KmlDocument {
         ),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }
@@ -92,6 +98,8 @@ test "geojson escapes quotes in name" {
         geometry: None,
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }

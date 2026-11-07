@@ -14,6 +14,8 @@ fn gpx_sample_doc() -> KmlDocument {
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: Some(3.0), })),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
       {
         name: "L",
@@ -28,6 +30,8 @@ fn gpx_sample_doc() -> KmlDocument {
         ),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }
@@ -61,6 +65,8 @@ test "gpx escapes ampersand in name" {
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }

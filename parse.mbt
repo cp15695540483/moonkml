@@ -599,8 +599,38 @@ fn parse_style_map(elem : XmlElement) -> KmlStyleMap {
 }
 
 ///|
+/// 解析 TimeStamp / TimeSpan。
+fn parse_time(elem : XmlElement) -> KmlTime? {
+  match first_element(elem, "TimeStamp") {
+    Some(ts) =>
+      match first_element(ts, "when") {
+        Some(w) => Some({ when: trim_text(w.text()), begin: "", end: "", })
+        None => None
+      }
+    None =>
+      match first_element(elem, "TimeSpan") {
+        Some(span) => {
+          let begin = match first_element(span, "begin") {
+            Some(b) => trim_text(b.text())
+            None => ""
+          }
+          let end = match first_element(span, "end") {
+            Some(e) => trim_text(e.text())
+            None => ""
+          }
+          Some({ when: "", begin, end, })
+        }
+        None => None
+      }
+  }
+}
+
+///|
 /// 解析一个 Placemark。
-fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
+fn parse_placemark(
+  elem : XmlElement,
+  folder : String,
+) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
     Some(t) => t
     None => ""
@@ -634,12 +664,17 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
     None => ""
   }
   let extended_data = parse_extended_data(elem)
-  { name, description, geometry, style_url, extended_data, }
+  let timestamp = parse_time(elem)
+  { name, description, geometry, style_url, extended_data, folder, timestamp, }
 }
 
 ///|
 /// 递归遍历元素树，收集 Document 名称与 Placemark。
-fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
+fn walk(
+  elem : XmlElement,
+  acc : Collector,
+  folder : String,
+) -> Unit raise KmlError {
   if elem.name == "Document" && acc.document_name == "" {
     match child_text(elem, "name") {
       Some(t) => acc.document_name = t
@@ -647,7 +682,7 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
     }
   }
   if elem.name == "Placemark" {
-    acc.placemarks.push(parse_placemark(elem))
+    acc.placemarks.push(parse_placemark(elem, folder))
   }
   if elem.name == "Style" {
     acc.styles.push(parse_style(elem))
@@ -658,7 +693,24 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
   let mut i = 0
   while i < elem.children.length() {
     match elem.children[i] {
-      Element(child) => walk(child, acc)
+      Element(child) => {
+        let child_folder = if child.name == "Folder" {
+          let fname = match child_text(child, "name") {
+            Some(t) => t
+            None => ""
+          }
+          if folder == "" {
+            fname
+          } else if fname == "" {
+            folder
+          } else {
+            folder + "/" + fname
+          }
+        } else {
+          folder
+        }
+        walk(child, acc, child_folder)
+      }
       Text(_) => ()
     }
     i = i + 1
@@ -675,7 +727,7 @@ pub fn parse(text : String) -> KmlDocument raise KmlError {
     styles: [],
     style_maps: [],
   }
-  walk(root, acc)
+  walk(root, acc, "")
   {
     name: acc.document_name,
     placemarks: acc.placemarks,

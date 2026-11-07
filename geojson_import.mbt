@@ -210,7 +210,15 @@ fn placemark_from_feature(value : Json) -> Placemark raise KmlError {
         Some(g) => geometry_from_json(g)
         None => None
       }
-      { name, description, geometry, style_url: "", extended_data: [], }
+      {
+        name,
+        description,
+        geometry,
+        style_url: "",
+        extended_data: [],
+        folder: "",
+        timestamp: None,
+      }
     }
   }
 }
@@ -257,6 +265,8 @@ pub fn from_geojson(text : String) -> KmlDocument raise KmlError {
       geometry,
       style_url: "",
       extended_data: [],
+      folder: "",
+      timestamp: None,
     })
   }
   { name: "", placemarks, styles: [], style_maps: [], }

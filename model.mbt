@@ -83,6 +83,14 @@ pub(all) struct KmlData {
 }
 
 ///|
+/// 时间信息：TimeStamp（瞬时）或 TimeSpan（区间），三者至多一个非空。
+pub(all) struct KmlTime {
+  when : String
+  begin : String
+  end : String
+}
+
+///|
 /// 一个 Placemark。
 pub(all) struct Placemark {
   name : String
@@ -90,6 +98,24 @@ pub(all) struct Placemark {
   geometry : Geometry?
   style_url : String
   extended_data : Array[KmlData]
+  /// 所属 Folder 路径（"A/B"），顶层为空串
+  folder : String
+  /// 时间信息
+  timestamp : KmlTime?
+}
+
+///|
+/// 便捷构造：只给名称与几何，其余字段取默认值。
+pub fn Placemark::new(name : String, geometry : Geometry?) -> Placemark {
+  {
+    name,
+    description: "",
+    geometry,
+    style_url: "",
+    extended_data: [],
+    folder: "",
+    timestamp: None,
+  }
 }
 
 ///|
@@ -162,6 +188,12 @@ pub fn Placemark::has_gx_track(self : Placemark) -> Bool {
 /// 多边形的内环数。
 pub fn KmlPolygon::inner_count(self : KmlPolygon) -> Int32 {
   self.inner.length()
+}
+
+///|
+/// 是否有时间信息。
+pub fn Placemark::has_time(self : Placemark) -> Bool {
+  self.timestamp is Some(_)
 }
 
 ///|

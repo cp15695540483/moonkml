@@ -14,12 +14,16 @@ fn sample_doc() -> KmlDocument {
         geometry: Some(Geometry::Point({ lon: 1.5, lat: 2.5, alt: Some(3.0), })),
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
       {
         name: "L",
         description: "",
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
         geometry: Some(
           Geometry::LineString({
             points: [
@@ -34,6 +38,8 @@ fn sample_doc() -> KmlDocument {
         description: "",
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
         geometry: Some(
           Geometry::Polygon({
             outer: {
@@ -120,6 +126,8 @@ test "empty geometry serializes to plain placemark" {
         geometry: None,
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }

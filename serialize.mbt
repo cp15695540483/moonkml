@@ -182,6 +182,28 @@ fn serialize_placemark(out : Array[Byte], pm : Placemark) -> Unit {
     push_escaped(out, pm.style_url)
     push_lit(out, "</styleUrl>")
   }
+  match pm.timestamp {
+    Some(t) =>
+      if t.when != "" {
+        push_lit(out, "<TimeStamp><when>")
+        push_escaped(out, t.when)
+        push_lit(out, "</when></TimeStamp>")
+      } else {
+        push_lit(out, "<TimeSpan>")
+        if t.begin != "" {
+          push_lit(out, "<begin>")
+          push_escaped(out, t.begin)
+          push_lit(out, "</begin>")
+        }
+        if t.end != "" {
+          push_lit(out, "<end>")
+          push_escaped(out, t.end)
+          push_lit(out, "</end>")
+        }
+        push_lit(out, "</TimeSpan>")
+      }
+    None => ()
+  }
   if pm.extended_data.length() > 0 {
     push_lit(out, "<ExtendedData>")
     let mut k = 0

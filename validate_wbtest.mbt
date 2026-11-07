@@ -14,6 +14,8 @@ fn doc_with(geometry : Geometry?) -> KmlDocument {
         geometry,
         style_url: "",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }
@@ -92,6 +94,8 @@ test "dangling style reference is reported" {
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
         style_url: "#missing",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }
@@ -112,6 +116,8 @@ test "resolvable style reference passes" {
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
         style_url: "#s",
         extended_data: [],
+        folder: "",
+        timestamp: None,
       },
     ],
   }

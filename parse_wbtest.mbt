@@ -354,6 +354,54 @@ test "gx track exports to geojson linestring and gpx track" {
 }
 
 ///|
+test "folder path is recorded" {
+  let doc = try! parse(
+    "<kml><Document><Folder><name>A</name><Folder><name>B</name><Placemark><name>P</name><Point><coordinates>1,2</coordinates></Point></Placemark></Folder></Folder></Document></kml>",
+  )
+  assert_eq(doc.placemarks[0].folder, "A/B")
+}
+
+///|
+test "top-level placemark has empty folder" {
+  let doc = try! parse(
+    "<kml><Document><Placemark><name>P</name><Point><coordinates>1,2</coordinates></Point></Placemark></Document></kml>",
+  )
+  assert_eq(doc.placemarks[0].folder, "")
+}
+
+///|
+test "timestamp is parsed and round-trips" {
+  let doc = try! parse(
+    "<kml><Placemark><TimeStamp><when>2020-01-01T00:00:00Z</when></TimeStamp><Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+  )
+  assert_eq(doc.placemarks[0].has_time(), true)
+  match doc.placemarks[0].timestamp {
+    Some(ts) => assert_eq(ts.when, "2020-01-01T00:00:00Z")
+    None => fail("expected timestamp")
+  }
+  let back = try! parse(serialize(doc))
+  match back.placemarks[0].timestamp {
+    Some(ts) => assert_eq(ts.when, "2020-01-01T00:00:00Z")
+    None => fail("expected timestamp after round-trip")
+  }
+}
+
+///|
+test "time span is parsed" {
+  let doc = try! parse(
+    "<kml><Placemark><TimeSpan><begin>b</begin><end>e</end></TimeSpan><Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+  )
+  match doc.placemarks[0].timestamp {
+    Some(ts) => {
+      assert_eq(ts.begin, "b")
+      assert_eq(ts.end, "e")
+      assert_eq(ts.when, "")
+    }
+    None => fail("expected time span")
+  }
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

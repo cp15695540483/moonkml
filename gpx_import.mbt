@@ -73,6 +73,8 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
             geometry: Some(Geometry::Point(point_from_gpx(child))),
             style_url: "",
             extended_data: [],
+            folder: "",
+            timestamp: None,
           })
         } else if child.name == "rte" {
           let pts = points_from_gpx(child, "rtept")
@@ -83,6 +85,8 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
               geometry: Some(Geometry::LineString({ points: pts, })),
               style_url: "",
               extended_data: [],
+              folder: "",
+              timestamp: None,
             })
           }
         } else if child.name == "trk" {
@@ -108,6 +112,8 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
               geometry: Some(Geometry::LineString({ points: segs[0], })),
               style_url: "",
               extended_data: [],
+              folder: "",
+              timestamp: None,
             })
           } else if segs.length() > 1 {
             let parts : Array[Geometry] = []
@@ -122,6 +128,8 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
               geometry: Some(Geometry::MultiGeometry(parts)),
               style_url: "",
               extended_data: [],
+              folder: "",
+              timestamp: None,
             })
           }
         }
