@@ -20,4 +20,6 @@ pub(all) suberror KmlError {
   MissingCoordinates
   /// 坐标文本无法解析
   BadCoordinates(String)
+  /// 宿主 I/O 失败（库本身不做 I/O，由调用方转换进来）
+  HostIo(String)
 }

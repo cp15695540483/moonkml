@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Demo Trip</name>
+    <Placemark>
+      <name>Beijing</name>
+      <description>Capital city</description>
+      <Point><coordinates>116.3975,39.9087,44</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Route</name>
+      <LineString><coordinates>116.0,39.0 116.5,39.5 117.0,40.0</coordinates></LineString>
+    </Placemark>
+  </Document>
+</kml>

@@ -1,5 +1,8 @@
 import {
   "cp15695540483/moonkml" @kml,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
 }
 
 pkgtype(kind: "executable")
