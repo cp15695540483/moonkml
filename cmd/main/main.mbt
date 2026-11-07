@@ -3,7 +3,9 @@
 
 ///|
 fn usage() -> Unit {
-  println("usage: moonkml <input.kml|.kmz> [--geojson|--gpx|--summary]")
+  println(
+    "usage: moonkml <input.kml|.kmz|.geojson|.gpx> [--summary|--geojson|--gpx|--validate]",
+  )
 }
 
 ///|
@@ -41,6 +43,17 @@ fn run_cli(args : Array[String]) -> Int32 {
       @kml.from_gpx(read_text(path))
     } else {
       @kml.parse(read_text(path))
+    }
+    if mode == "--validate" {
+      let issues = @kml.validate(doc)
+      if issues.length() == 0 {
+        println("OK\tno issues")
+      } else {
+        for issue in issues {
+          println("ISSUE\t" + issue.placemark + "\t" + issue.message)
+        }
+      }
+      return if issues.length() == 0 { 0 } else { 1 }
     }
     if mode == "--geojson" {
       println(@kml.to_geojson(doc))
