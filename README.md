@@ -32,7 +32,7 @@ import {
 | GeoJSON 导入与导出（RFC 7946）、GPX 1.1 导入与导出 | ✅ |
 | 数据校验（坐标越界、环闭合、样式悬空、gx:Track 一致性） | ✅ |
 | 命令行：摘要 / GeoJSON / GPX 输出 / 校验 | ✅ |
-| Camera / LookAt / 时间戳 / 网络链接 | 未实现（明确不做） |
+| Camera / LookAt / NetworkLink / 三维模型与叠置图层 | 未实现（明确不做，见覆盖矩阵） |
 
 ## 使用
 
@@ -47,6 +47,7 @@ for pm in doc.placemarks {
     Some(@kml.Geometry::LineString(ls)) => println(pm.name + ": " + ls.point_count().to_string() + " vertices")
     Some(@kml.Geometry::Polygon(poly)) => println(pm.name + ": " + poly.inner_count().to_string() + " holes")
     Some(@kml.Geometry::MultiGeometry(gs)) => println(pm.name + ": " + gs.length().to_string() + " parts")
+    Some(@kml.Geometry::GxTrack(t)) => println(pm.name + ": " + t.point_count().to_string() + " track points")
     None => println(pm.name + ": no geometry")
   }
 }
