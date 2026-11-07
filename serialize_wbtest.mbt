@@ -5,15 +5,18 @@
 fn sample_doc() -> KmlDocument {
   {
     name: "Round",
+    styles: [],
     placemarks: [
       {
         name: "P",
         description: "a <b> & c",
         geometry: Some(Geometry::Point({ lon: 1.5, lat: 2.5, alt: Some(3.0), })),
+        style_url: "",
       },
       {
         name: "L",
         description: "",
+        style_url: "",
         geometry: Some(
           Geometry::LineString({
             points: [
@@ -26,6 +29,7 @@ fn sample_doc() -> KmlDocument {
       {
         name: "G",
         description: "",
+        style_url: "",
         geometry: Some(
           Geometry::Polygon({
             outer: {
@@ -103,7 +107,10 @@ test "text is XML-escaped" {
 test "empty geometry serializes to plain placemark" {
   let doc : KmlDocument = {
     name: "",
-    placemarks: [{ name: "NoGeo", description: "", geometry: None, }],
+    styles: [],
+    placemarks: [
+      { name: "NoGeo", description: "", geometry: None, style_url: "", },
+    ],
   }
   let text = serialize(doc)
   let back = try! parse(text)

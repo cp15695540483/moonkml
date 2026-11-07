@@ -8,6 +8,7 @@
 priv struct Collector {
   mut document_name : String
   placemarks : Array[Placemark]
+  styles : Array[KmlStyle]
 }
 
 ///|
@@ -406,6 +407,64 @@ fn parse_multi_geometry(elem : XmlElement) -> Array[Geometry]? raise KmlError {
 }
 
 ///|
+/// 解析 KML 颜色 aabbggrr（十六进制）。
+fn parse_color(text : String) -> String? {
+  let trimmed = trim_text(text)
+  let data = @utf8.encode(trimmed)
+  if data.length() != 8 {
+    return None
+  }
+  let mut i = 0
+  while i < 8 {
+    let d = hex_digit(data[i])
+    if d < 0 {
+      return None
+    }
+    i = i + 1
+  }
+  Some(trimmed)
+}
+
+///|
+/// 解析一个 Style 元素（id + LineStyle/PolyStyle 的颜色与宽度）。
+fn parse_style(elem : XmlElement) -> KmlStyle {
+  let id = match first_element(elem, "id") {
+    Some(_) => "x"
+    None => ""
+  }
+  // 实际 id 是元素属性，不是子元素
+  let real_id = match elem.attr("id") {
+    Some(v) => v
+    None => id
+  }
+  let mut line_color : String? = None
+  let mut line_width : Double? = None
+  let mut fill_color : String? = None
+  match first_element(elem, "LineStyle") {
+    Some(ls) => {
+      match first_element(ls, "color") {
+        Some(c) => line_color = parse_color(c.text())
+        None => ()
+      }
+      match first_element(ls, "width") {
+        Some(w) => line_width = parse_double(trim_text(w.text()))
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match first_element(elem, "PolyStyle") {
+    Some(ps) =>
+      match first_element(ps, "color") {
+        Some(c) => fill_color = parse_color(c.text())
+        None => ()
+      }
+    None => ()
+  }
+  { id: real_id, line_color, line_width, fill_color, }
+}
+
+///|
 /// 解析一个 Placemark。
 fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
@@ -432,7 +491,11 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
           }
       }
   }
-  { name, description, geometry, }
+  let style_url = match child_text(elem, "styleUrl") {
+    Some(t) => t
+    None => ""
+  }
+  { name, description, geometry, style_url, }
 }
 
 ///|
@@ -446,6 +509,9 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
   }
   if elem.name == "Placemark" {
     acc.placemarks.push(parse_placemark(elem))
+  }
+  if elem.name == "Style" {
+    acc.styles.push(parse_style(elem))
   }
   let mut i = 0
   while i < elem.children.length() {
@@ -461,7 +527,7 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
 /// 解析 KML 文本。
 pub fn parse(text : String) -> KmlDocument raise KmlError {
   let root = parse_xml(text)
-  let acc : Collector = { document_name: "", placemarks: [], }
+  let acc : Collector = { document_name: "", placemarks: [], styles: [], }
   walk(root, acc)
-  { name: acc.document_name, placemarks: acc.placemarks, }
+  { name: acc.document_name, placemarks: acc.placemarks, styles: acc.styles, }
 }

@@ -222,6 +222,37 @@ test "multi geometry round-trips" {
 }
 
 ///|
+test "style is parsed with line and poly colors" {
+  let doc = try! parse(
+    "<kml><Document>\n" +
+    "<Style id=\"road\"><LineStyle><color>ff0000ff</color><width>3</width></LineStyle><PolyStyle><color>7f00ff00</color></PolyStyle></Style>\n" +
+    "<Placemark><name>R</name><styleUrl>#road</styleUrl><Point><coordinates>1,2</coordinates></Point></Placemark>\n" +
+    "</Document></kml>",
+  )
+  assert_eq(doc.style_count(), 1)
+  assert_eq(doc.placemarks[0].style_url, "#road")
+  match doc.find_style("road") {
+    Some(st) => {
+      assert_eq(st.line_color, Some("ff0000ff"))
+      assert_eq(st.line_width, Some(3.0))
+      assert_eq(st.fill_color, Some("7f00ff00"))
+    }
+    None => fail("expected style")
+  }
+}
+
+///|
+test "style round-trips" {
+  let doc = try! parse(
+    "<kml><Document><Style id=\"s1\"><LineStyle><color>ff0000ff</color><width>2</width></LineStyle></Style><Placemark><name>P</name><styleUrl>#s1</styleUrl><Point><coordinates>1,2</coordinates></Point></Placemark></Document></kml>",
+  )
+  let text = serialize(doc)
+  let back = try! parse(text)
+  assert_eq(back.style_count(), 1)
+  assert_eq(back.placemarks[0].style_url, "#s1")
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

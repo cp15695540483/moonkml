@@ -45,13 +45,24 @@ pub(all) struct Placemark {
   name : String
   description : String
   geometry : Geometry?
+  style_url : String
 }
 
 ///|
-/// 解析后的 KML 文档。
+/// 样式表：id → 样式定义。
 pub(all) struct KmlDocument {
   name : String
   placemarks : Array[Placemark]
+  styles : Array[KmlStyle]
+}
+
+///|
+/// 一个样式定义：线条颜色与宽度、填充颜色。
+pub(all) struct KmlStyle {
+  id : String
+  line_color : String?
+  line_width : Double?
+  fill_color : String?
 }
 
 ///|
@@ -109,4 +120,23 @@ pub fn LinearRing::point_count(self : LinearRing) -> Int32 {
 /// 多边形的内环数。
 pub fn KmlPolygon::inner_count(self : KmlPolygon) -> Int32 {
   self.inner.length()
+}
+
+///|
+/// 样式数量。
+pub fn KmlDocument::style_count(self : KmlDocument) -> Int32 {
+  self.styles.length()
+}
+
+///|
+/// 按 id 找样式。
+pub fn KmlDocument::find_style(self : KmlDocument, id : String) -> KmlStyle? {
+  let mut i = 0
+  while i < self.styles.length() {
+    if self.styles[i].id == id {
+      return Some(self.styles[i])
+    }
+    i = i + 1
+  }
+  None
 }

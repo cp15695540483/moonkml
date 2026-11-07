@@ -151,6 +151,11 @@ fn serialize_placemark(out : Array[Byte], pm : Placemark) -> Unit {
     push_escaped(out, pm.description)
     push_lit(out, "</description>")
   }
+  if pm.style_url != "" {
+    push_lit(out, "<styleUrl>")
+    push_escaped(out, pm.style_url)
+    push_lit(out, "</styleUrl>")
+  }
   match pm.geometry {
     Some(g) => serialize_geometry(out, g)
     None => ()
@@ -172,6 +177,41 @@ pub fn serialize(doc : KmlDocument) -> String {
     push_lit(out, "<name>")
     push_escaped(out, doc.name)
     push_lit(out, "</name>")
+  }
+  let mut i = 0
+  while i < doc.styles.length() {
+    push_newline(out)
+    let st = doc.styles[i]
+    push_lit(out, "<Style id=\"")
+    push_escaped(out, st.id)
+    push_lit(out, "\">")
+    match st.line_color {
+      Some(c) => {
+        push_lit(out, "<LineStyle><color>")
+        push_escaped(out, c)
+        push_lit(out, "</color>")
+        match st.line_width {
+          Some(w) => {
+            push_lit(out, "<width>")
+            push_double(out, w)
+            push_lit(out, "</width>")
+          }
+          None => ()
+        }
+        push_lit(out, "</LineStyle>")
+      }
+      None => ()
+    }
+    match st.fill_color {
+      Some(c) => {
+        push_lit(out, "<PolyStyle><color>")
+        push_escaped(out, c)
+        push_lit(out, "</color></PolyStyle>")
+      }
+      None => ()
+    }
+    push_lit(out, "</Style>")
+    i = i + 1
   }
   let mut i = 0
   while i < doc.placemarks.length() {

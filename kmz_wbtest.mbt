@@ -5,11 +5,13 @@
 fn kmz_sample_doc() -> KmlDocument {
   {
     name: "KMZ",
+    styles: [],
     placemarks: [
       {
         name: "P",
         description: "",
         geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        style_url: "",
       },
     ],
   }
