@@ -161,6 +161,49 @@ fn split_commas(text : String) -> Array[String] {
 }
 
 ///|
+/// 按任意空白或换行切分坐标元组文本，逐段去空白。
+fn split_whitespace(text : String) -> Array[String] {
+  let data = @utf8.encode(text)
+  let out : Array[String] = []
+  let mut i = 0
+  let n = data.length()
+  while i < n {
+    while i < n && is_space(data[i]) {
+      i = i + 1
+    }
+    if i >= n {
+      break
+    }
+    let start = i
+    while i < n && !is_space(data[i]) {
+      i = i + 1
+    }
+    out.push(@utf8.decode_lossy(data.clamped_view(start~, end=i)))
+  }
+  out
+}
+
+///|
+/// 解析单个坐标文本「lon,lat[,alt]」。
+fn parse_coordinate(text : String) -> KmlPoint raise KmlError {
+  let parts = split_commas(text)
+  if parts.length() < 2 || parts[0] == "" || parts[1] == "" {
+    raise BadCoordinates(text)
+  }
+  let lon = parse_double(parts[0])
+  let lat = parse_double(parts[1])
+  let alt = if parts.length() >= 3 && parts[2] != "" {
+    parse_double(parts[2])
+  } else {
+    None
+  }
+  match (lon, lat) {
+    (Some(lon), Some(lat)) => { lon, lat, alt, }
+    _ => raise BadCoordinates(text)
+  }
+}
+
+///|
 /// 解析 Placemark 里的 Point 几何；没有 Point 返回 None。
 fn parse_point(elem : XmlElement) -> KmlPoint? raise KmlError {
   match first_element(elem, "Point") {
@@ -168,23 +211,36 @@ fn parse_point(elem : XmlElement) -> KmlPoint? raise KmlError {
     Some(point_elem) =>
       match first_element(point_elem, "coordinates") {
         None => raise MissingCoordinates
+        Some(coords) => Some(parse_coordinate(trim_text(coords.text())))
+      }
+  }
+}
+
+///|
+/// 解析 Placemark 里的 LineString 几何；没有 LineString 返回 None。
+///
+/// KML 允许用换行分隔坐标元组、空格分隔分量，两者都按任意空白切分。
+fn parse_line_string(elem : XmlElement) -> KmlLineString? raise KmlError {
+  match first_element(elem, "LineString") {
+    None => None
+    Some(ls_elem) =>
+      match first_element(ls_elem, "coordinates") {
+        None => raise MissingCoordinates
         Some(coords) => {
           let text = trim_text(coords.text())
-          let parts = split_commas(text)
-          if parts.length() < 2 || parts[0] == "" || parts[1] == "" {
+          let tuples = split_whitespace(text)
+          let points : Array[KmlPoint] = []
+          let mut i = 0
+          while i < tuples.length() {
+            if tuples[i] != "" {
+              points.push(parse_coordinate(tuples[i]))
+            }
+            i = i + 1
+          }
+          if points.length() == 0 {
             raise BadCoordinates(text)
           }
-          let lon = parse_double(parts[0])
-          let lat = parse_double(parts[1])
-          let alt = if parts.length() >= 3 && parts[2] != "" {
-            parse_double(parts[2])
-          } else {
-            None
-          }
-          match (lon, lat) {
-            (Some(lon), Some(lat)) => Some({ lon, lat, alt, })
-            _ => raise BadCoordinates(text)
-          }
+          Some({ points, })
         }
       }
   }
@@ -201,7 +257,12 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
     Some(t) => t
     None => ""
   }
-  { name, description, point: parse_point(elem), }
+  {
+    name,
+    description,
+    point: parse_point(elem),
+    line_string: parse_line_string(elem),
+  }
 }
 
 ///|

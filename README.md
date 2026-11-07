@@ -12,7 +12,8 @@ KML 是 Google Earth、无人机航迹、GPS 轨迹与地图标注的通用交�
 | `<Document>` 名称 | ✅ |
 | `<Placemark>` 的 `name` / `description` | ✅ |
 | `<Point>` 与 `<coordinates>`（含可选高度） | ✅ |
-| 其它几何（LineString / Polygon / MultiGeometry） | 计划中 |
+| `<LineString>`（空白分隔或换行分隔的顶点） | ✅ |
+| Polygon / MultiGeometry | 计划中 |
 | 样式（Style / StyleMap） | 计划中 |
 | KMZ 读写 | 计划中 |
 | KML 序列化 | 计划中 |

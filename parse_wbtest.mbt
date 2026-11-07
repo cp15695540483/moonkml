@@ -93,6 +93,50 @@ test "whitespace around coordinates is trimmed" {
 }
 
 ///|
+/// 一条折线的 KML 片段。
+fn sample_line_kml() -> String {
+  "<kml><Document><Placemark><name>Path</name>\n" +
+  "<LineString><coordinates>\n" +
+  "  0,0,0 1,1 2,2,5\n" +
+  "</coordinates></LineString>\n" +
+  "</Placemark></Document></kml>"
+}
+
+///|
+test "line string is parsed with whitespace-separated points" {
+  let doc = try! parse(sample_line_kml())
+  assert_eq(doc.placemark_count(), 1)
+  let pm = doc.placemarks[0]
+  assert_eq(pm.has_line_string(), true)
+  assert_eq(pm.has_point(), false)
+  match pm.line_string {
+    Some(ls) => {
+      assert_eq(ls.point_count(), 3)
+      assert_close(ls.points[0].lon, 0.0)
+      assert_close(ls.points[0].lat, 0.0)
+      assert_close(ls.points[2].lon, 2.0)
+      assert_close(ls.points[2].lat, 2.0)
+      match ls.points[2].alt {
+        Some(a) => assert_close(a, 5.0)
+        None => fail("expected altitude on third vertex")
+      }
+    }
+    None => fail("expected line string")
+  }
+}
+
+///|
+test "line string with newline-separated tuples" {
+  let doc = try! parse(
+    "<kml><Placemark><LineString><coordinates>1,2\n3,4\n5,6</coordinates></LineString></Placemark></kml>",
+  )
+  match doc.placemarks[0].line_string {
+    Some(ls) => assert_eq(ls.point_count(), 3)
+    None => fail("expected line string")
+  }
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

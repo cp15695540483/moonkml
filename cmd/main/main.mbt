@@ -10,6 +10,9 @@ let sample : String = "<?xml version=\"1.0\"?>\n" +
   "<Placemark><name>Shanghai</name>\n" +
   "<Point><coordinates>121.4737,31.2304</coordinates></Point>\n" +
   "</Placemark>\n" +
+  "<Placemark><name>Track</name>\n" +
+  "<LineString><coordinates>\n116.0,39.0,0 116.1,39.1 116.2,39.2\n</coordinates></LineString>\n" +
+  "</Placemark>\n" +
   "</Document></kml>"
 
 ///|
@@ -21,7 +24,17 @@ fn main {
     match pm.point {
       Some(p) =>
         println(pm.name + " -> " + p.lon.to_string() + ", " + p.lat.to_string())
-      None => println(pm.name + " -> (no point)")
+      None =>
+        match pm.line_string {
+          Some(ls) =>
+            println(
+              pm.name +
+              " -> line with " +
+              ls.point_count().to_string() +
+              " vertices",
+            )
+          None => println(pm.name + " -> (no geometry)")
+        }
     }
   }
 }
