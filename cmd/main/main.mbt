@@ -71,6 +71,13 @@ fn run_cli(args : Array[String]) -> Int32 {
             println(
               pm.name + " -> multi " + geoms.length().to_string() + " parts",
             )
+          Some(@kml.Geometry::GxTrack(track)) =>
+            println(
+              pm.name +
+              " -> gx:Track " +
+              track.point_count().to_string() +
+              " points",
+            )
           None => println(pm.name + " -> (no geometry)")
         }
       }

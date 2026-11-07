@@ -23,9 +23,9 @@ import {
 | 能力 | 状态 |
 | --- | --- |
 | KML 解析（XML 子集：元素、属性、文本、CDATA、注释、PI、实体引用） | ✅ |
-| 几何：Point / LineString / Polygon（外环 + 内环）/ MultiGeometry | ✅ |
+| 几何：Point / LineString / Polygon（外环 + 内环）/ MultiGeometry / gx:Track | ✅ |
 | Placemark `name` / `description` / `styleUrl` | ✅ |
-| Style（LineStyle 颜色与宽度、PolyStyle 颜色） | ✅ |
+| Style（LineStyle 颜色与宽度、PolyStyle 颜色）与 StyleMap | ✅ |
 | ExtendedData（`Data name/value`） | ✅ |
 | KML 序列化（模型 → KML 文本） | ✅ |
 | KMZ 读写（ZIP + DEFLATE 解压 + CRC32 校验） | ✅ |
@@ -81,9 +81,9 @@ moon run cmd/main -- examples/sample.kml --gpx
 - `kmz_parse(data : Bytes) -> KmlDocument raise KmlError` / `kmz_pack(doc) -> Bytes`
 - `to_geojson(doc) -> String` / `to_gpx(doc) -> String`
 - `parse_xml(text) -> XmlElement raise KmlError`（通用 XML 子集）
-- `KmlDocument::{ name, placemarks, styles, placemark_count(), style_count(), find_style(id) }`
+- `KmlDocument::{ name, placemarks, styles, style_maps, placemark_count(), style_count(), style_map_count(), find_style(id), find_style_map(id) }`
 - `Placemark::{ name, description, geometry, style_url, extended_data, has_geometry(), has_point(), has_line_string(), has_multi_geometry(), data_count(), find_data(name) }`
-- `Geometry::{ Point(KmlPoint), LineString(KmlLineString), Polygon(KmlPolygon), MultiGeometry(Array[Geometry]) }`
+- `Geometry::{ Point(KmlPoint), LineString(KmlLineString), Polygon(KmlPolygon), MultiGeometry(Array[Geometry]), GxTrack(KmlGxTrack) }`
 - `KmlPolygon::{ outer, inner, inner_count() }`、`KmlStyle::{ id, line_color, line_width, fill_color }`
 
 ## 设计说明

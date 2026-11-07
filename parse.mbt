@@ -347,6 +347,31 @@ fn geometry_from_elem(elem : XmlElement) -> Geometry? raise KmlError {
       Some(poly) => Some(Geometry::Polygon(poly))
       None => None
     }
+  } else if elem.name == "gx:Track" {
+    let whens : Array[String] = []
+    let coords : Array[KmlPoint] = []
+    let mut i = 0
+    while i < elem.children.length() {
+      match elem.children[i] {
+        Element(child) =>
+          if child.name == "when" {
+            whens.push(trim_text(child.text()))
+          } else if child.name == "gx:coord" {
+            let parts = split_whitespace(trim_text(child.text()))
+            if parts.length() >= 2 {
+              let lon = parse_double(parts[0])
+              let lat = parse_double(parts[1])
+              match (lon, lat) {
+                (Some(lon), Some(lat)) => coords.push({ lon, lat, alt: None, })
+                _ => ()
+              }
+            }
+          }
+        Text(_) => ()
+      }
+      i = i + 1
+    }
+    Some(Geometry::GxTrack({ whens, coords, }))
   } else {
     None
   }
@@ -380,6 +405,48 @@ fn parse_polygon_container(elem : XmlElement) -> KmlPolygon? raise KmlError {
           Some({ outer: parse_ring(outer_ring), inner, })
         }
       }
+  }
+}
+
+///|
+/// 解析一条 gx:Track。
+///
+/// gx:coord 是空格分隔的「lon lat [alt]」，与 when 按出现顺序对应。
+fn parse_gx_track(elem : XmlElement) -> KmlGxTrack? raise KmlError {
+  match first_element(elem, "gx:Track") {
+    None => None
+    Some(track) => {
+      let whens : Array[String] = []
+      let coords : Array[KmlPoint] = []
+      let mut i = 0
+      while i < track.children.length() {
+        match track.children[i] {
+          Element(child) =>
+            if child.name == "when" {
+              whens.push(trim_text(child.text()))
+            } else if child.name == "gx:coord" {
+              let parts = split_whitespace(trim_text(child.text()))
+              if parts.length() < 2 {
+                raise BadCoordinates(trim_text(child.text()))
+              }
+              let lon = parse_double(parts[0])
+              let lat = parse_double(parts[1])
+              let alt = if parts.length() >= 3 && parts[2] != "" {
+                parse_double(parts[2])
+              } else {
+                None
+              }
+              match (lon, lat) {
+                (Some(lon), Some(lat)) => coords.push({ lon, lat, alt, })
+                _ => raise BadCoordinates(trim_text(child.text()))
+              }
+            }
+          Text(_) => ()
+        }
+        i = i + 1
+      }
+      Some({ whens, coords, })
+    }
   }
 }
 
@@ -551,9 +618,13 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
           match parse_polygon(elem) {
             Some(poly) => Some(Geometry::Polygon(poly))
             None =>
-              match parse_multi_geometry(elem) {
-                Some(geoms) => Some(Geometry::MultiGeometry(geoms))
-                None => None
+              match parse_gx_track(elem) {
+                Some(track) => Some(Geometry::GxTrack(track))
+                None =>
+                  match parse_multi_geometry(elem) {
+                    Some(geoms) => Some(Geometry::MultiGeometry(geoms))
+                    None => None
+                  }
               }
           }
       }

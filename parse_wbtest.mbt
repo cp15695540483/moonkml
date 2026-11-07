@@ -306,6 +306,54 @@ test "style map round-trips" {
 }
 
 ///|
+test "gx track is parsed with when and coord" {
+  let doc = try! parse(
+    "<kml><Placemark><name>T</name>\n" +
+    "<gx:Track>\n" +
+    "<when>2020-01-01T00:00:00Z</when><gx:coord>116.0 39.0 10</gx:coord>\n" +
+    "<when>2020-01-01T00:00:01Z</when><gx:coord>116.1 39.1 11</gx:coord>\n" +
+    "</gx:Track></Placemark></kml>",
+  )
+  assert_eq(doc.placemarks[0].has_gx_track(), true)
+  match doc.placemarks[0].geometry {
+    Some(Geometry::GxTrack(track)) => {
+      assert_eq(track.point_count(), 2)
+      assert_eq(track.whens.length(), 2)
+      assert_close(track.coords[1].lon, 116.1)
+      match track.coords[1].alt {
+        Some(a) => assert_close(a, 11.0)
+        None => fail("expected altitude")
+      }
+    }
+    _ => fail("expected gx track")
+  }
+}
+
+///|
+test "gx track round-trips" {
+  let doc = try! parse(
+    "<kml><Placemark><gx:Track><when>t0</when><gx:coord>1 2 3</gx:coord></gx:Track></Placemark></kml>",
+  )
+  let back = try! parse(serialize(doc))
+  assert_eq(back.placemarks[0].has_gx_track(), true)
+  match back.placemarks[0].geometry {
+    Some(Geometry::GxTrack(track)) => assert_eq(track.point_count(), 1)
+    _ => fail("expected gx track")
+  }
+}
+
+///|
+test "gx track exports to geojson linestring and gpx track" {
+  let doc = try! parse(
+    "<kml><Placemark><gx:Track><gx:coord>1 2 0</gx:coord><gx:coord>3 4 0</gx:coord></gx:Track></Placemark></kml>",
+  )
+  let gj = @utf8.encode(to_geojson(doc))
+  assert_eq(gj.find(b"\"LineString\"") != None, true)
+  let gx = @utf8.encode(to_gpx(doc))
+  assert_eq(gx.find(b"<trkseg>") != None, true)
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

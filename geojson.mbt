@@ -101,6 +101,18 @@ fn push_geojson_geometry(out : Array[Byte], geometry : Geometry) -> Unit {
     Geometry::Point(p) => push_geojson_point(out, p)
     Geometry::LineString(ls) => push_geojson_linestring(out, ls)
     Geometry::Polygon(poly) => push_geojson_polygon(out, poly)
+    Geometry::GxTrack(track) => {
+      push_lit(out, "{\"type\":\"LineString\",\"coordinates\":[")
+      let mut i = 0
+      while i < track.coords.length() {
+        push_position(out, track.coords[i].lon, track.coords[i].lat)
+        if i + 1 < track.coords.length() {
+          push_lit(out, ",")
+        }
+        i = i + 1
+      }
+      push_lit(out, "]}")
+    }
     Geometry::MultiGeometry(_) => push_lit(out, "null")
   }
 }

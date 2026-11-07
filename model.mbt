@@ -31,12 +31,22 @@ pub(all) struct KmlPolygon {
 }
 
 ///|
+/// 一条 gx:Track：Google Earth 扩展的 GPS 轨迹，坐标与时间戳一一对应。
+pub(all) struct KmlGxTrack {
+  /// 每个点的时间戳字符串（<when>），可为空
+  whens : Array[String]
+  /// 轨迹点（lon/lat/alt，空格分隔的 <gx:coord>）
+  coords : Array[KmlPoint]
+}
+
+///|
 /// 几何类型。
 pub(all) enum Geometry {
   Point(KmlPoint)
   LineString(KmlLineString)
   Polygon(KmlPolygon)
   MultiGeometry(Array[Geometry])
+  GxTrack(KmlGxTrack)
 }
 
 ///|
@@ -131,6 +141,21 @@ pub fn KmlLineString::point_count(self : KmlLineString) -> Int32 {
 /// 环的顶点数。
 pub fn LinearRing::point_count(self : LinearRing) -> Int32 {
   self.points.length()
+}
+
+///|
+/// gx:Track 的点数。
+pub fn KmlGxTrack::point_count(self : KmlGxTrack) -> Int32 {
+  self.coords.length()
+}
+
+///|
+/// 是否为 gx:Track。
+pub fn Placemark::has_gx_track(self : Placemark) -> Bool {
+  match self.geometry {
+    Some(Geometry::GxTrack(_)) => true
+    _ => false
+  }
 }
 
 ///|

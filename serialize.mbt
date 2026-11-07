@@ -134,6 +134,32 @@ fn serialize_geometry(out : Array[Byte], geometry : Geometry) -> Unit {
       }
       push_lit(out, "</MultiGeometry>")
     }
+    Geometry::GxTrack(track) => {
+      push_lit(out, "<gx:Track>")
+      let mut i = 0
+      while i < track.whens.length() {
+        push_lit(out, "<when>")
+        push_escaped(out, track.whens[i])
+        push_lit(out, "</when>")
+        i = i + 1
+      }
+      let mut k = 0
+      while k < track.coords.length() {
+        let p = track.coords[k]
+        push_lit(out, "<gx:coord>")
+        push_double(out, p.lon)
+        push_lit(out, " ")
+        push_double(out, p.lat)
+        push_lit(out, " ")
+        match p.alt {
+          Some(a) => push_double(out, a)
+          None => push_lit(out, "0")
+        }
+        push_lit(out, "</gx:coord>")
+        k = k + 1
+      }
+      push_lit(out, "</gx:Track>")
+    }
   }
 }
 

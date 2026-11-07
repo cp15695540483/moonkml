@@ -43,11 +43,11 @@ fn push_trkpt(out : Array[Byte], p : KmlPoint) -> Unit {
 
 ///|
 /// 追加一个 track。
-fn push_trkseg(out : Array[Byte], ls : KmlLineString) -> Unit {
+fn push_trkseg(out : Array[Byte], points : Array[KmlPoint]) -> Unit {
   push_lit(out, "<trk><trkseg>")
   let mut i = 0
-  while i < ls.points.length() {
-    push_trkpt(out, ls.points[i])
+  while i < points.length() {
+    push_trkpt(out, points[i])
     i = i + 1
   }
   push_lit(out, "</trkseg></trk>")
@@ -82,7 +82,8 @@ pub fn to_gpx(doc : KmlDocument) -> String {
         push_xml_escaped(out, pm.name)
         push_lit(out, "</name></wpt>")
       }
-      Some(Geometry::LineString(ls)) => push_trkseg(out, ls)
+      Some(Geometry::LineString(ls)) => push_trkseg(out, ls.points)
+      Some(Geometry::GxTrack(track)) => push_trkseg(out, track.coords)
       _ => ()
     }
     push_newline(out)
