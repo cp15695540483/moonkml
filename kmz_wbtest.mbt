@@ -6,6 +6,7 @@ fn kmz_sample_doc() -> KmlDocument {
   {
     name: "KMZ",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "P",

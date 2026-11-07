@@ -274,6 +274,38 @@ test "extended data round-trips" {
 }
 
 ///|
+test "style map is parsed" {
+  let doc = try! parse(
+    "<kml><Document>\n" +
+    "<Style id=\"n\"><LineStyle><color>ff0000ff</color></LineStyle></Style>\n" +
+    "<StyleMap id=\"m\"><Pair><key>normal</key><styleUrl>#n</styleUrl></Pair><Pair><key>highlight</key><styleUrl>#h</styleUrl></Pair></StyleMap>\n" +
+    "<Placemark><name>P</name><styleUrl>#m</styleUrl><Point><coordinates>1,2</coordinates></Point></Placemark>\n" +
+    "</Document></kml>",
+  )
+  assert_eq(doc.style_map_count(), 1)
+  match doc.find_style_map("m") {
+    Some(map) => {
+      assert_eq(map.normal, "#n")
+      assert_eq(map.highlight, "#h")
+    }
+    None => fail("expected style map")
+  }
+}
+
+///|
+test "style map round-trips" {
+  let doc = try! parse(
+    "<kml><Document><StyleMap id=\"m\"><Pair><key>normal</key><styleUrl>#n</styleUrl></Pair></StyleMap><Placemark><name>P</name><Point><coordinates>1,2</coordinates></Point></Placemark></Document></kml>",
+  )
+  let back = try! parse(serialize(doc))
+  assert_eq(back.style_map_count(), 1)
+  match back.find_style_map("m") {
+    Some(map) => assert_eq(map.normal, "#n")
+    None => fail("expected style map")
+  }
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

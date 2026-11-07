@@ -6,6 +6,7 @@ fn sample_doc() -> KmlDocument {
   {
     name: "Round",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "P",
@@ -111,6 +112,7 @@ test "empty geometry serializes to plain placemark" {
   let doc : KmlDocument = {
     name: "",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "NoGeo",

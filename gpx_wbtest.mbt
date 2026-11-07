@@ -6,6 +6,7 @@ fn gpx_sample_doc() -> KmlDocument {
   {
     name: "Trip",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "P",
@@ -52,6 +53,7 @@ test "gpx escapes ampersand in name" {
   let doc : KmlDocument = {
     name: "",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "A & B",

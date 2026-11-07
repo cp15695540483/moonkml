@@ -227,6 +227,19 @@ pub fn serialize(doc : KmlDocument) -> String {
     push_lit(out, "</Style>")
     i = i + 1
   }
+  let mut sm = 0
+  while sm < doc.style_maps.length() {
+    push_newline(out)
+    let map = doc.style_maps[sm]
+    push_lit(out, "<StyleMap id=\"")
+    push_escaped(out, map.id)
+    push_lit(out, "\"><Pair><key>normal</key><styleUrl>")
+    push_escaped(out, map.normal)
+    push_lit(out, "</styleUrl></Pair><Pair><key>highlight</key><styleUrl>")
+    push_escaped(out, map.highlight)
+    push_lit(out, "</styleUrl></Pair></StyleMap>")
+    sm = sm + 1
+  }
   let mut i = 0
   while i < doc.placemarks.length() {
     push_newline(out)

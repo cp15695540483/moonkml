@@ -6,6 +6,7 @@ fn geo_sample_doc() -> KmlDocument {
   {
     name: "Geo",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "P",
@@ -83,6 +84,7 @@ test "geojson escapes quotes in name" {
   let doc : KmlDocument = {
     name: "",
     styles: [],
+    style_maps: [],
     placemarks: [
       {
         name: "a\"b",

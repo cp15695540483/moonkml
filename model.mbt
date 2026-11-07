@@ -45,6 +45,7 @@ pub(all) struct KmlDocument {
   name : String
   placemarks : Array[Placemark]
   styles : Array[KmlStyle]
+  style_maps : Array[KmlStyleMap]
 }
 
 ///|
@@ -54,6 +55,14 @@ pub(all) struct KmlStyle {
   line_color : String?
   line_width : Double?
   fill_color : String?
+}
+
+///|
+/// 一个 StyleMap：normal / highlight 两个键指向的样式 id。
+pub(all) struct KmlStyleMap {
+  id : String
+  normal : String
+  highlight : String
 }
 
 ///|
@@ -153,6 +162,28 @@ pub fn Placemark::find_data(self : Placemark, name : String) -> String? {
 /// 样式数量。
 pub fn KmlDocument::style_count(self : KmlDocument) -> Int32 {
   self.styles.length()
+}
+
+///|
+/// StyleMap 数量。
+pub fn KmlDocument::style_map_count(self : KmlDocument) -> Int32 {
+  self.style_maps.length()
+}
+
+///|
+/// 按 id 找 StyleMap。
+pub fn KmlDocument::find_style_map(
+  self : KmlDocument,
+  id : String,
+) -> KmlStyleMap? {
+  let mut i = 0
+  while i < self.style_maps.length() {
+    if self.style_maps[i].id == id {
+      return Some(self.style_maps[i])
+    }
+    i = i + 1
+  }
+  None
 }
 
 ///|

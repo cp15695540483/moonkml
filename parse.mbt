@@ -9,6 +9,7 @@ priv struct Collector {
   mut document_name : String
   placemarks : Array[Placemark]
   styles : Array[KmlStyle]
+  style_maps : Array[KmlStyleMap]
 }
 
 ///|
@@ -496,6 +497,41 @@ fn parse_extended_data(elem : XmlElement) -> Array[KmlData] {
 }
 
 ///|
+/// 解析一个 StyleMap：收集 Pair 里 normal / highlight 的 styleUrl。
+fn parse_style_map(elem : XmlElement) -> KmlStyleMap {
+  let id = match elem.attr("id") {
+    Some(v) => v
+    None => ""
+  }
+  let mut normal = ""
+  let mut highlight = ""
+  let mut i = 0
+  while i < elem.children.length() {
+    match elem.children[i] {
+      Element(pair) =>
+        if pair.name == "Pair" {
+          let key = match first_element(pair, "key") {
+            Some(k) => trim_text(k.text())
+            None => ""
+          }
+          let url = match first_element(pair, "styleUrl") {
+            Some(u) => trim_text(u.text())
+            None => ""
+          }
+          if key == "normal" {
+            normal = url
+          } else if key == "highlight" {
+            highlight = url
+          }
+        }
+      Text(_) => ()
+    }
+    i = i + 1
+  }
+  { id, normal, highlight, }
+}
+
+///|
 /// 解析一个 Placemark。
 fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
@@ -545,6 +581,9 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
   if elem.name == "Style" {
     acc.styles.push(parse_style(elem))
   }
+  if elem.name == "StyleMap" {
+    acc.style_maps.push(parse_style_map(elem))
+  }
   let mut i = 0
   while i < elem.children.length() {
     match elem.children[i] {
@@ -559,7 +598,17 @@ fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
 /// 解析 KML 文本。
 pub fn parse(text : String) -> KmlDocument raise KmlError {
   let root = parse_xml(text)
-  let acc : Collector = { document_name: "", placemarks: [], styles: [], }
+  let acc : Collector = {
+    document_name: "",
+    placemarks: [],
+    styles: [],
+    style_maps: [],
+  }
   walk(root, acc)
-  { name: acc.document_name, placemarks: acc.placemarks, styles: acc.styles, }
+  {
+    name: acc.document_name,
+    placemarks: acc.placemarks,
+    styles: acc.styles,
+    style_maps: acc.style_maps,
+  }
 }
