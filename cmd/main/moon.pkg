@@ -1,0 +1,5 @@
+import {
+  "cp15695540483/moonkml" @kml,
+}
+
+pkgtype(kind: "executable")

@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cp15695540483/moonkml"
+
+// Values
+pub fn parse(String) -> KmlDocument raise KmlError
+
+pub fn parse_xml(String) -> XmlElement raise KmlError
+
+// Errors
+pub(all) suberror KmlError {
+  XmlSyntax(String, Int)
+  XmlMismatch(String, String, Int)
+  XmlUnexpectedEnd(String, Int)
+  XmlUnclosed(String, Int)
+  XmlMissingRoot
+  XmlMultipleRoots(Int)
+  MissingCoordinates
+  BadCoordinates(String)
+}
+
+// Types and methods
+pub(all) struct KmlDocument {
+  name : String
+  placemarks : Array[Placemark]
+}
+pub fn KmlDocument::placemark_count(Self) -> Int
+
+pub(all) struct KmlPoint {
+  lon : Double
+  lat : Double
+  alt : Double?
+}
+
+pub(all) struct Placemark {
+  name : String
+  description : String
+  point : KmlPoint?
+}
+pub fn Placemark::has_point(Self) -> Bool
+
+pub(all) struct XmlAttr {
+  name : String
+  value : String
+}
+
+pub(all) struct XmlElement {
+  name : String
+  attrs : Array[XmlAttr]
+  children : Array[XmlNode]
+}
+pub fn XmlElement::attr(Self, String) -> String?
+pub fn XmlElement::child(Self, String) -> Self?
+pub fn XmlElement::text(Self) -> String
+
+pub(all) enum XmlNode {
+  Element(XmlElement)
+  Text(String)
+}
+
+// Type aliases
+
+// Traits

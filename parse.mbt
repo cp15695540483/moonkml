@@ -1,0 +1,236 @@
+// KML 解析：把 XML 树转成 KmlDocument。
+//
+// 这一版只认 Document / Folder / Placemark / name / description / Point / coordinates，
+// 其它元素一律忽略——KML 允许扩展元素，忽略比报错更符合实际数据。
+
+///|
+/// 收集过程中的中间状态。
+priv struct Collector {
+  mut document_name : String
+  placemarks : Array[Placemark]
+}
+
+///|
+/// 去掉首尾空白。
+fn trim_text(text : String) -> String {
+  let data = @utf8.encode(text)
+  let mut start = 0
+  let mut end = data.length()
+  while start < end && is_space(data[start]) {
+    start = start + 1
+  }
+  while end > start && is_space(data[end - 1]) {
+    end = end - 1
+  }
+  @utf8.decode_lossy(data.clamped_view(start~, end~))
+}
+
+///|
+/// 第一个同名子元素。
+fn first_element(elem : XmlElement, name : String) -> XmlElement? {
+  elem.child(name)
+}
+
+///|
+/// 直接子元素的文本（去首尾空白）。
+fn child_text(elem : XmlElement, name : String) -> String? {
+  match elem.child(name) {
+    Some(c) => Some(trim_text(c.text()))
+    None => None
+  }
+}
+
+///|
+/// 解析一个十进制浮点数：符号、整数、小数、指数。
+fn parse_double(text : String) -> Double? {
+  let data = @utf8.encode(text)
+  let n = data.length()
+  let mut i = 0
+  let mut negative = false
+  if i < n && (data[i] == b'-' || data[i] == b'+') {
+    negative = data[i] == b'-'
+    i = i + 1
+  }
+  let mut mantissa = 0.0
+  let mut seen = false
+  while i < n && dec_digit(data[i]) >= 0 {
+    mantissa = mantissa * 10.0 + digit_value(dec_digit(data[i]))
+    seen = true
+    i = i + 1
+  }
+  let mut fraction = 0
+  if i < n && data[i] == b'.' {
+    i = i + 1
+    while i < n && dec_digit(data[i]) >= 0 {
+      mantissa = mantissa * 10.0 + digit_value(dec_digit(data[i]))
+      fraction = fraction + 1
+      seen = true
+      i = i + 1
+    }
+  }
+  if !seen {
+    return None
+  }
+  let mut exponent = 0
+  if i < n && (data[i] == b'e' || data[i] == b'E') {
+    i = i + 1
+    let mut exp_negative = false
+    if i < n && (data[i] == b'-' || data[i] == b'+') {
+      exp_negative = data[i] == b'-'
+      i = i + 1
+    }
+    let mut value = 0
+    let mut digits = 0
+    while i < n && dec_digit(data[i]) >= 0 {
+      value = value * 10 + dec_digit(data[i])
+      digits = digits + 1
+      i = i + 1
+    }
+    if digits == 0 {
+      return None
+    }
+    exponent = if exp_negative { -value } else { value }
+  }
+  if i != n {
+    return None
+  }
+  // 单次除法 / 乘法而不是逐位缩放，避免多次舍入把结果推离最近的双精度值。
+  let mut value = mantissa
+  if fraction > 0 {
+    let scale = pow10(fraction)
+    value = value / scale
+  }
+  if exponent != 0 {
+    let scale = pow10(if exponent < 0 { -exponent } else { exponent })
+    if exponent > 0 {
+      value = value * scale
+    } else {
+      value = value / scale
+    }
+  }
+  Some(if negative { -value } else { value })
+}
+
+///|
+/// 10 的 n 次幂（n <= 308），用循环累乘得到最近的双精度值。
+fn pow10(n : Int32) -> Double {
+  let mut value = 1.0
+  let mut k = 0
+  while k < n {
+    value = value * 10.0
+    k = k + 1
+  }
+  value
+}
+
+///|
+/// 0..9 到 Double 的映射。
+fn digit_value(digit : Int32) -> Double {
+  match digit {
+    0 => 0.0
+    1 => 1.0
+    2 => 2.0
+    3 => 3.0
+    4 => 4.0
+    5 => 5.0
+    6 => 6.0
+    7 => 7.0
+    8 => 8.0
+    _ => 9.0
+  }
+}
+
+///|
+/// 按逗号切分坐标文本，逐段去空白。
+fn split_commas(text : String) -> Array[String] {
+  let data = @utf8.encode(text)
+  let out : Array[String] = []
+  let mut start = 0
+  let mut i = 0
+  while i < data.length() {
+    if data[i] == b',' {
+      out.push(trim_text(@utf8.decode_lossy(data.clamped_view(start~, end=i))))
+      start = i + 1
+    }
+    i = i + 1
+  }
+  out.push(
+    trim_text(@utf8.decode_lossy(data.clamped_view(start~, end=data.length()))),
+  )
+  out
+}
+
+///|
+/// 解析 Placemark 里的 Point 几何；没有 Point 返回 None。
+fn parse_point(elem : XmlElement) -> KmlPoint? raise KmlError {
+  match first_element(elem, "Point") {
+    None => None
+    Some(point_elem) =>
+      match first_element(point_elem, "coordinates") {
+        None => raise MissingCoordinates
+        Some(coords) => {
+          let text = trim_text(coords.text())
+          let parts = split_commas(text)
+          if parts.length() < 2 || parts[0] == "" || parts[1] == "" {
+            raise BadCoordinates(text)
+          }
+          let lon = parse_double(parts[0])
+          let lat = parse_double(parts[1])
+          let alt = if parts.length() >= 3 && parts[2] != "" {
+            parse_double(parts[2])
+          } else {
+            None
+          }
+          match (lon, lat) {
+            (Some(lon), Some(lat)) => Some({ lon, lat, alt, })
+            _ => raise BadCoordinates(text)
+          }
+        }
+      }
+  }
+}
+
+///|
+/// 解析一个 Placemark。
+fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
+  let name = match child_text(elem, "name") {
+    Some(t) => t
+    None => ""
+  }
+  let description = match child_text(elem, "description") {
+    Some(t) => t
+    None => ""
+  }
+  { name, description, point: parse_point(elem), }
+}
+
+///|
+/// 递归遍历元素树，收集 Document 名称与 Placemark。
+fn walk(elem : XmlElement, acc : Collector) -> Unit raise KmlError {
+  if elem.name == "Document" && acc.document_name == "" {
+    match child_text(elem, "name") {
+      Some(t) => acc.document_name = t
+      None => ()
+    }
+  }
+  if elem.name == "Placemark" {
+    acc.placemarks.push(parse_placemark(elem))
+  }
+  let mut i = 0
+  while i < elem.children.length() {
+    match elem.children[i] {
+      Element(child) => walk(child, acc)
+      Text(_) => ()
+    }
+    i = i + 1
+  }
+}
+
+///|
+/// 解析 KML 文本。
+pub fn parse(text : String) -> KmlDocument raise KmlError {
+  let root = parse_xml(text)
+  let acc : Collector = { document_name: "", placemarks: [], }
+  walk(root, acc)
+  { name: acc.document_name, placemarks: acc.placemarks, }
+}
