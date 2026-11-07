@@ -65,6 +65,14 @@ pub(all) struct KmlStyle {
   line_color : String?
   line_width : Double?
   fill_color : String?
+  /// IconStyle 的图标地址
+  icon_href : String?
+  /// IconStyle 的缩放
+  icon_scale : Double?
+  /// LabelStyle 的文字颜色
+  label_color : String?
+  /// LabelStyle 的缩放
+  label_scale : Double?
 }
 
 ///|

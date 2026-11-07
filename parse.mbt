@@ -508,6 +508,10 @@ fn parse_style(elem : XmlElement) -> KmlStyle {
   let mut line_color : String? = None
   let mut line_width : Double? = None
   let mut fill_color : String? = None
+  let mut icon_href : String? = None
+  let mut icon_scale : Double? = None
+  let mut label_color : String? = None
+  let mut label_scale : Double? = None
   match first_element(elem, "LineStyle") {
     Some(ls) => {
       match first_element(ls, "color") {
@@ -529,7 +533,46 @@ fn parse_style(elem : XmlElement) -> KmlStyle {
       }
     None => ()
   }
-  { id: real_id, line_color, line_width, fill_color, }
+  match first_element(elem, "IconStyle") {
+    Some(icon) => {
+      match first_element(icon, "Icon") {
+        Some(icon_el) =>
+          match first_element(icon_el, "href") {
+            Some(h) => icon_href = Some(trim_text(h.text()))
+            None => ()
+          }
+        None => ()
+      }
+      match first_element(icon, "scale") {
+        Some(s) => icon_scale = parse_double(trim_text(s.text()))
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match first_element(elem, "LabelStyle") {
+    Some(label) => {
+      match first_element(label, "color") {
+        Some(c) => label_color = parse_color(c.text())
+        None => ()
+      }
+      match first_element(label, "scale") {
+        Some(s) => label_scale = parse_double(trim_text(s.text()))
+        None => ()
+      }
+    }
+    None => ()
+  }
+  {
+    id: real_id,
+    line_color,
+    line_width,
+    fill_color,
+    icon_href,
+    icon_scale,
+    label_color,
+    label_scale,
+  }
 }
 
 ///|

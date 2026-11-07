@@ -107,7 +107,18 @@ test "dangling style reference is reported" {
 test "resolvable style reference passes" {
   let doc : KmlDocument = {
     name: "",
-    styles: [{ id: "s", line_color: None, line_width: None, fill_color: None, }],
+    styles: [
+      {
+        id: "s",
+        line_color: None,
+        line_width: None,
+        fill_color: None,
+        icon_href: None,
+        icon_scale: None,
+        label_color: None,
+        label_scale: None,
+      },
+    ],
     style_maps: [],
     placemarks: [
       {

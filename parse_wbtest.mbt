@@ -402,6 +402,37 @@ test "time span is parsed" {
 }
 
 ///|
+test "icon and label style are parsed" {
+  let doc = try! parse(
+    "<kml><Document>\n" +
+    "<Style id=\"s\"><IconStyle><color>ffffffff</color><scale>1.5</scale><Icon><href>http://x/i.png</href></Icon></IconStyle><LabelStyle><color>ff00ff00</color><scale>2</scale></LabelStyle></Style>\n" +
+    "<Placemark><name>P</name><styleUrl>#s</styleUrl><Point><coordinates>1,2</coordinates></Point></Placemark>\n" +
+    "</Document></kml>",
+  )
+  match doc.find_style("s") {
+    Some(st) => {
+      assert_eq(st.icon_href, Some("http://x/i.png"))
+      assert_eq(st.icon_scale, Some(1.5))
+      assert_eq(st.label_color, Some("ff00ff00"))
+      assert_eq(st.label_scale, Some(2.0))
+    }
+    None => fail("expected style")
+  }
+}
+
+///|
+test "icon style round-trips" {
+  let doc = try! parse(
+    "<kml><Document><Style id=\"s\"><IconStyle><scale>1.5</scale><Icon><href>i.png</href></Icon></IconStyle></Style><Placemark><name>P</name><styleUrl>#s</styleUrl><Point><coordinates>1,2</coordinates></Point></Placemark></Document></kml>",
+  )
+  let back = try! parse(serialize(doc))
+  match back.find_style("s") {
+    Some(st) => assert_eq(st.icon_href, Some("i.png"))
+    None => fail("expected style after round-trip")
+  }
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

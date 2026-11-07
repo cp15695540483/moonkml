@@ -272,6 +272,40 @@ pub fn serialize(doc : KmlDocument) -> String {
       }
       None => ()
     }
+    match st.icon_href {
+      Some(href) => {
+        push_lit(out, "<IconStyle>")
+        match st.icon_scale {
+          Some(sc) => {
+            push_lit(out, "<scale>")
+            push_double(out, sc)
+            push_lit(out, "</scale>")
+          }
+          None => ()
+        }
+        push_lit(out, "<Icon><href>")
+        push_escaped(out, href)
+        push_lit(out, "</href></Icon></IconStyle>")
+      }
+      None => ()
+    }
+    match st.label_color {
+      Some(c) => {
+        push_lit(out, "<LabelStyle><color>")
+        push_escaped(out, c)
+        push_lit(out, "</color>")
+        match st.label_scale {
+          Some(sc) => {
+            push_lit(out, "<scale>")
+            push_double(out, sc)
+            push_lit(out, "</scale>")
+          }
+          None => ()
+        }
+        push_lit(out, "</LabelStyle>")
+      }
+      None => ()
+    }
     push_lit(out, "</Style>")
     i = i + 1
   }

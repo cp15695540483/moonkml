@@ -25,7 +25,7 @@ import {
 | KML 解析（XML 子集：元素、属性、文本、CDATA、注释、PI、实体引用） | ✅ |
 | 几何：Point / LineString / Polygon（外环 + 内环）/ MultiGeometry / gx:Track | ✅ |
 | Placemark `name` / `description` / `styleUrl` / Folder 路径 / TimeStamp·TimeSpan | ✅ |
-| Style（LineStyle 颜色与宽度、PolyStyle 颜色）与 StyleMap | ✅ |
+| Style（LineStyle / PolyStyle / IconStyle / LabelStyle）与 StyleMap | ✅ |
 | ExtendedData（`Data name/value`） | ✅ |
 | KML 序列化（模型 → KML 文本） | ✅ |
 | KMZ 读写（ZIP + DEFLATE + CRC32）；多条目/资源提取 | ✅ |
