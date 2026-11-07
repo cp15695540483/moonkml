@@ -309,6 +309,103 @@ fn parse_polygon(elem : XmlElement) -> KmlPolygon? raise KmlError {
 }
 
 ///|
+/// 把一个「几何元素本身」按名字解析成 Geometry。
+///
+/// 与 parse_point/parse_line_string/parse_polygon 不同：那些从 Placemark
+/// 容器里找子元素，这里 elem 自己就是 Point/LineString/Polygon。
+fn geometry_from_elem(elem : XmlElement) -> Geometry? raise KmlError {
+  if elem.name == "Point" {
+    match first_element(elem, "coordinates") {
+      None => raise MissingCoordinates
+      Some(coords) =>
+        Some(Geometry::Point(parse_coordinate(trim_text(coords.text()))))
+    }
+  } else if elem.name == "LineString" {
+    match first_element(elem, "coordinates") {
+      None => raise MissingCoordinates
+      Some(coords) => {
+        let text = trim_text(coords.text())
+        let tuples = split_whitespace(text)
+        let points : Array[KmlPoint] = []
+        let mut i = 0
+        while i < tuples.length() {
+          if tuples[i] != "" {
+            points.push(parse_coordinate(tuples[i]))
+          }
+          i = i + 1
+        }
+        if points.length() == 0 {
+          raise BadCoordinates(text)
+        }
+        Some(Geometry::LineString({ points, }))
+      }
+    }
+  } else if elem.name == "Polygon" {
+    match parse_polygon_container(elem) {
+      Some(poly) => Some(Geometry::Polygon(poly))
+      None => None
+    }
+  } else {
+    None
+  }
+}
+
+///|
+/// 解析一个 Polygon 元素本身（不找子元素，elem 就是 Polygon）。
+fn parse_polygon_container(elem : XmlElement) -> KmlPolygon? raise KmlError {
+  match first_element(elem, "outerBoundaryIs") {
+    None => raise BadCoordinates("missing outerBoundaryIs")
+    Some(outer_boundary) =>
+      match first_element(outer_boundary, "LinearRing") {
+        None => raise BadCoordinates("missing outer LinearRing")
+        Some(outer_ring) => {
+          let inner : Array[LinearRing] = []
+          let mut i = 0
+          while i < elem.children.length() {
+            match elem.children[i] {
+              Element(inner_boundary) =>
+                if inner_boundary.name == "innerBoundaryIs" {
+                  match first_element(inner_boundary, "LinearRing") {
+                    Some(ring_elem) => inner.push(parse_ring(ring_elem))
+                    None =>
+                      raise BadCoordinates("innerBoundaryIs missing LinearRing")
+                  }
+                }
+              Text(_) => ()
+            }
+            i = i + 1
+          }
+          Some({ outer: parse_ring(outer_ring), inner, })
+        }
+      }
+  }
+}
+
+///|
+/// 解析 MultiGeometry：按出现顺序收集子几何。
+fn parse_multi_geometry(elem : XmlElement) -> Array[Geometry]? raise KmlError {
+  match first_element(elem, "MultiGeometry") {
+    None => None
+    Some(multi) => {
+      let geoms : Array[Geometry] = []
+      let mut i = 0
+      while i < multi.children.length() {
+        match multi.children[i] {
+          Element(child) =>
+            match geometry_from_elem(child) {
+              Some(g) => geoms.push(g)
+              None => ()
+            }
+          Text(_) => ()
+        }
+        i = i + 1
+      }
+      Some(geoms)
+    }
+  }
+}
+
+///|
 /// 解析一个 Placemark。
 fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
@@ -327,7 +424,11 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
         None =>
           match parse_polygon(elem) {
             Some(poly) => Some(Geometry::Polygon(poly))
-            None => None
+            None =>
+              match parse_multi_geometry(elem) {
+                Some(geoms) => Some(Geometry::MultiGeometry(geoms))
+                None => None
+              }
           }
       }
   }

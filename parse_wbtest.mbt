@@ -199,6 +199,29 @@ test "polygon without inner boundary" {
 }
 
 ///|
+test "multi geometry collects sub-geometries" {
+  let doc = try! parse(
+    "<kml><Placemark><MultiGeometry><Point><coordinates>1,2</coordinates></Point><LineString><coordinates>1,2 3,4</coordinates></LineString></MultiGeometry></Placemark></kml>",
+  )
+  assert_eq(doc.placemarks[0].has_multi_geometry(), true)
+  match doc.placemarks[0].geometry {
+    Some(Geometry::MultiGeometry(geoms)) => assert_eq(geoms.length(), 2)
+    _ => fail("expected multi geometry")
+  }
+}
+
+///|
+test "multi geometry round-trips" {
+  let text = serialize(
+    try! parse(
+      "<kml><Placemark><MultiGeometry><Point><coordinates>1,2</coordinates></Point></MultiGeometry></Placemark></kml>",
+    ),
+  )
+  let back = try! parse(text)
+  assert_eq(back.placemarks[0].has_multi_geometry(), true)
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

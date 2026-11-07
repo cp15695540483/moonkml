@@ -43,6 +43,10 @@ fn main {
           poly.inner_count().to_string() +
           " holes",
         )
+      Some(@kml.Geometry::MultiGeometry(geoms)) =>
+        println(
+          pm.name + " -> multi with " + geoms.length().to_string() + " parts",
+        )
       None => println(pm.name + " -> (no geometry)")
     }
   }

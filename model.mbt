@@ -36,6 +36,7 @@ pub(all) enum Geometry {
   Point(KmlPoint)
   LineString(KmlLineString)
   Polygon(KmlPolygon)
+  MultiGeometry(Array[Geometry])
 }
 
 ///|
@@ -70,6 +71,15 @@ pub fn Placemark::has_geometry(self : Placemark) -> Bool {
 pub fn Placemark::has_point(self : Placemark) -> Bool {
   match self.geometry {
     Some(Geometry::Point(_)) => true
+    _ => false
+  }
+}
+
+///|
+/// 是否为多重几何。
+pub fn Placemark::has_multi_geometry(self : Placemark) -> Bool {
+  match self.geometry {
+    Some(Geometry::MultiGeometry(_)) => true
     _ => false
   }
 }

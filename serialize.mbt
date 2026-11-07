@@ -119,6 +119,25 @@ fn serialize_polygon(out : Array[Byte], poly : KmlPolygon) -> Unit {
 }
 
 ///|
+/// 序列化一个 Geometry。
+fn serialize_geometry(out : Array[Byte], geometry : Geometry) -> Unit {
+  match geometry {
+    Geometry::Point(p) => serialize_point(out, p)
+    Geometry::LineString(ls) => serialize_line_string(out, ls)
+    Geometry::Polygon(poly) => serialize_polygon(out, poly)
+    Geometry::MultiGeometry(geoms) => {
+      push_lit(out, "<MultiGeometry>")
+      let mut i = 0
+      while i < geoms.length() {
+        serialize_geometry(out, geoms[i])
+        i = i + 1
+      }
+      push_lit(out, "</MultiGeometry>")
+    }
+  }
+}
+
+///|
 /// 序列化一个 Placemark。
 fn serialize_placemark(out : Array[Byte], pm : Placemark) -> Unit {
   push_lit(out, "<Placemark>")
@@ -133,9 +152,7 @@ fn serialize_placemark(out : Array[Byte], pm : Placemark) -> Unit {
     push_lit(out, "</description>")
   }
   match pm.geometry {
-    Some(Geometry::Point(p)) => serialize_point(out, p)
-    Some(Geometry::LineString(ls)) => serialize_line_string(out, ls)
-    Some(Geometry::Polygon(poly)) => serialize_polygon(out, poly)
+    Some(g) => serialize_geometry(out, g)
     None => ()
   }
   push_lit(out, "</Placemark>")
