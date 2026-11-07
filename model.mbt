@@ -40,15 +40,6 @@ pub(all) enum Geometry {
 }
 
 ///|
-/// 一个 Placemark。
-pub(all) struct Placemark {
-  name : String
-  description : String
-  geometry : Geometry?
-  style_url : String
-}
-
-///|
 /// 样式表：id → 样式定义。
 pub(all) struct KmlDocument {
   name : String
@@ -63,6 +54,23 @@ pub(all) struct KmlStyle {
   line_color : String?
   line_width : Double?
   fill_color : String?
+}
+
+///|
+/// 一个扩展数据条目（<Data name=".."><value>..</value></Data>）。
+pub(all) struct KmlData {
+  name : String
+  value : String
+}
+
+///|
+/// 一个 Placemark。
+pub(all) struct Placemark {
+  name : String
+  description : String
+  geometry : Geometry?
+  style_url : String
+  extended_data : Array[KmlData]
 }
 
 ///|
@@ -120,6 +128,25 @@ pub fn LinearRing::point_count(self : LinearRing) -> Int32 {
 /// 多边形的内环数。
 pub fn KmlPolygon::inner_count(self : KmlPolygon) -> Int32 {
   self.inner.length()
+}
+
+///|
+/// Placemark 的扩展数据条目数。
+pub fn Placemark::data_count(self : Placemark) -> Int32 {
+  self.extended_data.length()
+}
+
+///|
+/// 按名字找扩展数据值。
+pub fn Placemark::find_data(self : Placemark, name : String) -> String? {
+  let mut i = 0
+  while i < self.extended_data.length() {
+    if self.extended_data[i].name == name {
+      return Some(self.extended_data[i].value)
+    }
+    i = i + 1
+  }
+  None
 }
 
 ///|

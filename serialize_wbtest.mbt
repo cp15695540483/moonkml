@@ -12,11 +12,13 @@ fn sample_doc() -> KmlDocument {
         description: "a <b> & c",
         geometry: Some(Geometry::Point({ lon: 1.5, lat: 2.5, alt: Some(3.0), })),
         style_url: "",
+        extended_data: [],
       },
       {
         name: "L",
         description: "",
         style_url: "",
+        extended_data: [],
         geometry: Some(
           Geometry::LineString({
             points: [
@@ -30,6 +32,7 @@ fn sample_doc() -> KmlDocument {
         name: "G",
         description: "",
         style_url: "",
+        extended_data: [],
         geometry: Some(
           Geometry::Polygon({
             outer: {
@@ -109,7 +112,13 @@ test "empty geometry serializes to plain placemark" {
     name: "",
     styles: [],
     placemarks: [
-      { name: "NoGeo", description: "", geometry: None, style_url: "", },
+      {
+        name: "NoGeo",
+        description: "",
+        geometry: None,
+        style_url: "",
+        extended_data: [],
+      },
     ],
   }
   let text = serialize(doc)

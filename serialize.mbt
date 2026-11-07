@@ -156,6 +156,20 @@ fn serialize_placemark(out : Array[Byte], pm : Placemark) -> Unit {
     push_escaped(out, pm.style_url)
     push_lit(out, "</styleUrl>")
   }
+  if pm.extended_data.length() > 0 {
+    push_lit(out, "<ExtendedData>")
+    let mut k = 0
+    while k < pm.extended_data.length() {
+      let d = pm.extended_data[k]
+      push_lit(out, "<Data name=\"")
+      push_escaped(out, d.name)
+      push_lit(out, "\"><value>")
+      push_escaped(out, d.value)
+      push_lit(out, "</value></Data>")
+      k = k + 1
+    }
+    push_lit(out, "</ExtendedData>")
+  }
   match pm.geometry {
     Some(g) => serialize_geometry(out, g)
     None => ()

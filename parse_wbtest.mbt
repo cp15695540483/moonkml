@@ -253,6 +253,27 @@ test "style round-trips" {
 }
 
 ///|
+test "extended data is parsed" {
+  let doc = try! parse(
+    "<kml><Placemark><name>P</name>\n" +
+    "<ExtendedData><Data name=\"type\"><value>school</value></Data><Data name=\"count\"><value>42</value></Data></ExtendedData>\n" +
+    "<Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+  )
+  assert_eq(doc.placemarks[0].data_count(), 2)
+  assert_eq(doc.placemarks[0].find_data("type"), Some("school"))
+  assert_eq(doc.placemarks[0].find_data("count"), Some("42"))
+}
+
+///|
+test "extended data round-trips" {
+  let doc = try! parse(
+    "<kml><Placemark><ExtendedData><Data name=\"a\"><value>1</value></Data></ExtendedData><Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+  )
+  let back = try! parse(serialize(doc))
+  assert_eq(back.placemarks[0].find_data("a"), Some("1"))
+}
+
+///|
 test "missing coordinates raises" {
   let failed = try {
     let _ = parse("<kml><Placemark><Point></Point></Placemark></kml>")

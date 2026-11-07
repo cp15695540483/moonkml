@@ -465,6 +465,37 @@ fn parse_style(elem : XmlElement) -> KmlStyle {
 }
 
 ///|
+/// 解析 ExtendedData 里的 Data 条目。
+fn parse_extended_data(elem : XmlElement) -> Array[KmlData] {
+  let out : Array[KmlData] = []
+  match first_element(elem, "ExtendedData") {
+    None => ()
+    Some(ext) => {
+      let mut i = 0
+      while i < ext.children.length() {
+        match ext.children[i] {
+          Element(data_elem) =>
+            if data_elem.name == "Data" {
+              let name = match data_elem.attr("name") {
+                Some(v) => v
+                None => ""
+              }
+              let value = match first_element(data_elem, "value") {
+                Some(v) => trim_text(v.text())
+                None => ""
+              }
+              out.push({ name, value, })
+            }
+          Text(_) => ()
+        }
+        i = i + 1
+      }
+    }
+  }
+  out
+}
+
+///|
 /// 解析一个 Placemark。
 fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
   let name = match child_text(elem, "name") {
@@ -495,7 +526,8 @@ fn parse_placemark(elem : XmlElement) -> Placemark raise KmlError {
     Some(t) => t
     None => ""
   }
-  { name, description, geometry, style_url, }
+  let extended_data = parse_extended_data(elem)
+  { name, description, geometry, style_url, extended_data, }
 }
 
 ///|
