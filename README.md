@@ -99,6 +99,21 @@ moon run cmd/main -- examples/sample.kml --validate
 - **坐标解析**：单次除法/乘法做十进制定标，避免逐位缩放带来的多次舍入；测试用 1e-9 容差断言。
 - **ZIP 策略**：读取支持 Stored 与 DEFLATE（DEFLATE 解压复用 `moonbit-community/flate`，纯 MoonBit）；写入使用 DEFLATE + CRC32。
 
+## 性能
+
+`moon bench benchmarks --target wasm-gc --release`（本机 Windows，wasm-gc release）：
+
+| 用例 | 平均耗时 |
+| --- | --- |
+| 解析 1000 个点 Placemark | 5.15 ms |
+| 序列化 1000 个点 Placemark | 1.24 ms |
+| KMZ 打包（200 点） | 2.28 ms |
+| KMZ 解包（200 点） | 1.04 ms |
+
+## 覆盖范围
+
+元素级的支持矩阵见 [docs/KML-COVERAGE.md](docs/KML-COVERAGE.md)。
+
 ## 构建与测试
 
 ```bash

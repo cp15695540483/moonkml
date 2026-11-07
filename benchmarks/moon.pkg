@@ -1,0 +1,5 @@
+import {
+  "cp15695540483/moonkml" @kml,
+  "moonbitlang/core/bench",
+  "moonbitlang/core/encoding/utf8",
+}

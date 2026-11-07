@@ -46,6 +46,9 @@ jobs:
       - name: 单元测试（native）
         run: moon test --target native
 
+      - name: 基准测试（冒烟）
+        run: moon bench benchmarks --target wasm-gc --release
+
       - name: 安装 Python 对拍工具
         run: python3 -m pip install --quiet simplekml
 
