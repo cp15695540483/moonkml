@@ -4,7 +4,7 @@ version = "0.1.0"
 
 readme = "README.md"
 
-repository = ""
+repository = "https://github.com/cp15695540483/moonkml"
 
 license = "Apache-2.0"
 
@@ -16,4 +16,5 @@ description = "纯 MoonBit 的 KML/KMZ 读写库：文档模型、XML 解析、�
 
 import {
   "moonbitlang/x@0.5.7",
+  "moonbit-community/flate@0.10.0",
 }

@@ -1,58 +1,97 @@
 # moonkml
 
-纯 MoonBit 实现的 [KML 2.2](https://www.ogc.org/standards/kml) 读写库，不依赖任何 C 库或平台 API，可运行在 `wasm-gc`、`js` 与 `native` 后端。
+纯 MoonBit 实现的 [KML 2.2](https://www.ogc.org/standards/kml) 读写库。零 FFI，可运行在 `wasm-gc`、`js` 与 `native` 后端。
 
-KML 是 Google Earth、无人机航迹、GPS 轨迹与地图标注的通用交换格式；KMZ 是它的 ZIP 封装。MoonBit 生态已有 shapefile、GeoJSON、GPX、TopoJSON、MVT 等 GIS 模块，但 KML/KMZ 一直是空缺。
+KML 是 Google Earth、无人机航迹、GPS 轨迹与地图标注的通用交换格式；KMZ 是它的 ZIP 封装。MoonBit 生态已有 shapefile、GeoJSON、WKT/WKB、GPX、TopoJSON、MVT 等 GIS 模块，KML/KMZ 此前一直是空缺。
 
-## 当前支持
+## 安装
+
+```bash
+moon add cp15695540483/moonkml
+```
+
+在 `moon.pkg` 中导入：
+
+```
+import {
+  "cp15695540483/moonkml" @kml,
+}
+```
+
+## 能力
 
 | 能力 | 状态 |
 | --- | --- |
-| XML 解析（元素、属性、文本、CDATA、注释、处理指令、实体引用） | ✅ |
-| `<Document>` 名称 | ✅ |
-| `<Placemark>` 的 `name` / `description` | ✅ |
-| `<Point>` 与 `<coordinates>`（含可选高度） | ✅ |
-| `<LineString>`（空白分隔或换行分隔的顶点） | ✅ |
-| Polygon / MultiGeometry | 计划中 |
-| 样式（Style / StyleMap） | 计划中 |
-| KMZ 读写 | 计划中 |
-| KML 序列化 | 计划中 |
-| 与 GeoJSON / GPX 互转 | 计划中 |
+| KML 解析（XML 子集：元素、属性、文本、CDATA、注释、PI、实体引用） | ✅ |
+| 几何：Point / LineString / Polygon（外环 + 内环）/ MultiGeometry | ✅ |
+| Placemark `name` / `description` / `styleUrl` | ✅ |
+| Style（LineStyle 颜色与宽度、PolyStyle 颜色） | ✅ |
+| ExtendedData（`Data name/value`） | ✅ |
+| KML 序列化（模型 → KML 文本） | ✅ |
+| KMZ 读写（ZIP + DEFLATE 解压 + CRC32 校验） | ✅ |
+| 导出 GeoJSON（RFC 7946）与 GPX 1.1 | ✅ |
+| 命令行：摘要 / GeoJSON / GPX 输出 | ✅ |
+| Camera / LookAt / 时间戳 / 网络链接 | 未实现（明确不做） |
 
 ## 使用
 
-模块尚未发布到 mooncakes.io；本地开发时：
-
-```bash
-moon run cmd/main
-```
-
-在其它工程中使用（依赖本地路径或发布后的模块名）：
+### 解析 KML 文本
 
 ```moonbit
 let doc = try! @kml.parse(kml_text)
 println(doc.name)
 for pm in doc.placemarks {
-  match pm.point {
-    Some(p) => println(pm.name + ": " + p.lon.to_string() + ", " + p.lat.to_string())
-    None => println(pm.name + ": no point")
+  match pm.geometry {
+    Some(@kml.Geometry::Point(p)) => println(pm.name + ": " + p.lon.to_string() + ", " + p.lat.to_string())
+    Some(@kml.Geometry::LineString(ls)) => println(pm.name + ": " + ls.point_count().to_string() + " vertices")
+    Some(@kml.Geometry::Polygon(poly)) => println(pm.name + ": " + poly.inner_count().to_string() + " holes")
+    Some(@kml.Geometry::MultiGeometry(gs)) => println(pm.name + ": " + gs.length().to_string() + " parts")
+    None => println(pm.name + ": no geometry")
   }
 }
 ```
 
-## API
+### 读写 KMZ
 
-- `parse(text : String) -> KmlDocument raise KmlError`：解析 KML 文本
-- `parse_xml(text : String) -> XmlElement raise KmlError`：通用 XML 子集解析
-- `KmlDocument::{ name, placemarks, placemark_count() }`
-- `Placemark::{ name, description, point, has_point() }`
-- `KmlPoint::{ lon, lat, alt }`
+```moonbit
+let doc = try! @kml.kmz_parse(kmz_bytes)   // 支持 DEFLATE 压缩的标准 KMZ
+let bytes = @kml.kmz_pack(doc)             // 打包为 KMZ
+```
+
+### 导出
+
+```moonbit
+let geojson = @kml.to_geojson(doc)
+let gpx = @kml.to_gpx(doc)
+let kml_text = @kml.serialize(doc)
+```
+
+### 命令行
+
+```bash
+moon run cmd/main -- examples/sample.kml --summary
+moon run cmd/main -- examples/sample.kml --geojson
+moon run cmd/main -- examples/sample.kml --gpx
+```
+
+## API 摘要
+
+- `parse(text : String) -> KmlDocument raise KmlError`
+- `serialize(doc : KmlDocument) -> String`
+- `kmz_parse(data : Bytes) -> KmlDocument raise KmlError` / `kmz_pack(doc) -> Bytes`
+- `to_geojson(doc) -> String` / `to_gpx(doc) -> String`
+- `parse_xml(text) -> XmlElement raise KmlError`（通用 XML 子集）
+- `KmlDocument::{ name, placemarks, styles, placemark_count(), style_count(), find_style(id) }`
+- `Placemark::{ name, description, geometry, style_url, extended_data, has_geometry(), has_point(), has_line_string(), has_multi_geometry(), data_count(), find_data(name) }`
+- `Geometry::{ Point(KmlPoint), LineString(KmlLineString), Polygon(KmlPolygon), MultiGeometry(Array[Geometry]) }`
+- `KmlPolygon::{ outer, inner, inner_count() }`、`KmlStyle::{ id, line_color, line_width, fill_color }`
 
 ## 设计说明
 
-- **XML 子集**：KML 只需要元素、属性、文本、CDATA、注释、处理指令与常见实体；不实现 DTD 实体展开与命名空间解析，遇到未知元素直接忽略（KML 允许扩展元素）。
-- **错误模型**：`KmlError` 区分 XML 结构错误（带字节偏移）与 KML 语义缺失（缺 `coordinates`、坐标非法），便于调用方给出可定位的报错。
+- **XML 子集**：KML 只需要元素、属性、文本、CDATA、注释、处理指令与常见实体引用；不实现 DTD 实体展开与命名空间解析，未知元素直接忽略（KML 允许扩展元素）。
+- **错误模型**：`KmlError` 区分 XML 结构错误（带字节偏移）、KML 语义错误（缺 `coordinates`、坐标非法）与宿主 I/O 错误，便于调用方给出可定位的报错。
 - **坐标解析**：单次除法/乘法做十进制定标，避免逐位缩放带来的多次舍入；测试用 1e-9 容差断言。
+- **ZIP 策略**：读取支持 Stored 与 DEFLATE（DEFLATE 解压复用 `moonbit-community/flate`，纯 MoonBit）；写入使用 DEFLATE + CRC32。
 
 ## 构建与测试
 
@@ -60,7 +99,7 @@ for pm in doc.placemarks {
 moon check --target wasm-gc --deny-warn
 moon test --target wasm-gc
 moon test --target js
-moon run cmd/main
+moon fmt --check
 ```
 
 ## 许可证
@@ -69,5 +108,6 @@ Apache-2.0，见 [LICENSE](LICENSE)。
 
 ## 参考
 
-- OGC KML 2.2（标准文档）
-- Google KML 参考
+- OGC KML 2.2 标准
+- RFC 7946（GeoJSON）、GPX 1.1 Schema
+- `moonbit-community/flate`（DEFLATE 引擎，Apache-2.0）

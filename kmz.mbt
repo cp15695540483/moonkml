@@ -92,16 +92,18 @@ fn put_local_header(
   out : Array[Byte],
   name : String,
   size : Int32,
+  comp_size : Int32,
+  compression : Int32,
   crc : UInt32,
 ) -> Unit {
   put_u32(out, 0x04034b50)
   put_u16(out, 20)
   put_u16(out, 0)
-  put_u16(out, 0)
+  put_u16(out, compression)
   put_u16(out, 0)
   put_u16(out, 0)
   put_u32(out, crc)
-  put_u32(out, size.reinterpret_as_uint())
+  put_u32(out, comp_size.reinterpret_as_uint())
   put_u32(out, size.reinterpret_as_uint())
   put_u16(out, @utf8.encode(name).length())
   put_u16(out, 0)
@@ -118,10 +120,12 @@ pub fn zip_pack(entries : Array[ZipEntry]) -> Bytes {
     let data = entries[i].data
     let crc = crc32(data)
     let size = data.length()
-    put_local_header(out, name, size, crc)
+    let compressed = @flate.deflate_all(data)
+    let comp_size = compressed.length()
+    put_local_header(out, name, size, comp_size, 8, crc)
     let mut k = 0
-    while k < data.length() {
-      out.push(data[k])
+    while k < compressed.length() {
+      out.push(compressed[k])
       k = k + 1
     }
     i = i + 1
@@ -132,16 +136,18 @@ pub fn zip_pack(entries : Array[ZipEntry]) -> Bytes {
     let data = entries[i].data
     let crc = crc32(data)
     let size = data.length()
+    let compressed = @flate.deflate_all(data)
+    let comp_size = compressed.length()
     let name_len = @utf8.encode(name).length()
     put_u32(out, 0x02014b50)
     put_u16(out, 20)
     put_u16(out, 20)
     put_u16(out, 0)
-    put_u16(out, 0)
+    put_u16(out, 8)
     put_u16(out, 0)
     put_u16(out, 0)
     put_u32(out, crc)
-    put_u32(out, size.reinterpret_as_uint())
+    put_u32(out, comp_size.reinterpret_as_uint())
     put_u32(out, size.reinterpret_as_uint())
     put_u16(out, name_len)
     put_u16(out, 0)
@@ -184,20 +190,24 @@ pub fn zip_find(data : Bytes, name : String) -> Bytes? raise KmlError {
         data.clamped_view(start=name_start, end=name_start + name_len),
       )
       if got == name {
-        if comp_method != 0 {
-          raise XmlSyntax("unsupported zip compression", at)
-        }
         let content_start = name_start + name_len + extra_len
         if content_start + comp_size > n {
           raise XmlSyntax("truncated zip content", at)
         }
-        return Some(
-          Bytes::from_array(
-            data
-            .clamped_view(start=content_start, end=content_start + comp_size)
-            .to_array(),
-          ),
+        let raw = data.clamped_view(
+          start=content_start,
+          end=content_start + comp_size,
         )
+        if comp_method == 0 {
+          return Some(Bytes::from_array(raw.to_array()))
+        }
+        if comp_method == 8 {
+          let out = @flate.inflate_all(raw) catch {
+            _ => raise XmlSyntax("inflate failed", at)
+          }
+          return Some(out)
+        }
+        raise XmlSyntax("unsupported zip compression", at)
       }
       at = name_start + name_len + extra_len + comp_size
     } else {
