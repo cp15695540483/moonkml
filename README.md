@@ -165,6 +165,21 @@ python tools/record_demo.py --ffmpeg <ffmpeg 路径>
 
 元素级支持矩阵见 [docs/KML-COVERAGE.md](docs/KML-COVERAGE.md)，含「明确不做」的部分（Camera / NetworkLink / GroundOverlay / Model / 渲染语义 / gx:Tour）。
 
+## 代码结构
+
+按数据流分层，而不是把源文件堆在根目录：
+
+| 包 | 职责 |
+| --- | --- |
+| `src/core` | 文档模型、XML 子集解析、文本与数值基元、字节输出基元 |
+| `src/kml` | KML 读写：几何解析、文档解析、序列化 |
+| `src/formats` | GeoJSON 与 GPX 互转 |
+| `src/kmz` | ZIP 容器与 KMZ 打包解包 |
+| `src/check` | 文档校验 |
+| `facade.mbt` | 用 `pub using` 重导出，调用方仍是 `@kml.xxx` |
+
+依赖方向单向：`core` 不依赖任何子包，`kml` 与 `formats` 依赖 `core`，`kmz` 依赖 `kml`，`check` 依赖 `core`。单文件控制在 400 行内，最长 337 行。
+
 ## 许可与依据
 
 Apache-2.0，见 [LICENSE](LICENSE)。
