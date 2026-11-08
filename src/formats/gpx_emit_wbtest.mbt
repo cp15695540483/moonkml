@@ -2,7 +2,7 @@
 
 ///|
 /// 一个含点、线的文档。
-fn gpx_sample_doc() -> KmlDocument {
+fn gpx_sample_doc() -> @core.KmlDocument {
   {
     name: "Trip",
     styles: [],
@@ -11,7 +11,9 @@ fn gpx_sample_doc() -> KmlDocument {
       {
         name: "P",
         description: "",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: Some(3.0), })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: Some(3.0), }),
+        ),
         style_url: "",
         extended_data: [],
         folder: "",
@@ -21,7 +23,7 @@ fn gpx_sample_doc() -> KmlDocument {
         name: "L",
         description: "",
         geometry: Some(
-          Geometry::LineString({
+          @core.Geometry::LineString({
             points: [
               { lon: 0.0, lat: 0.0, alt: Some(3.0), },
               { lon: 1.0, lat: 1.0, alt: None, },
@@ -54,7 +56,7 @@ test "gpx includes altitude" {
 
 ///|
 test "gpx escapes ampersand in name" {
-  let doc : KmlDocument = {
+  let doc : @core.KmlDocument = {
     name: "",
     styles: [],
     style_maps: [],
@@ -62,7 +64,9 @@ test "gpx escapes ampersand in name" {
       {
         name: "A & B",
         description: "",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, }),
+        ),
         style_url: "",
         extended_data: [],
         folder: "",

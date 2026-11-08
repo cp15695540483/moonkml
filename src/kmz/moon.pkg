@@ -1,0 +1,6 @@
+import {
+  "cp15695540483/moonkml/src/core",
+  "cp15695540483/moonkml/src/kml",
+  "moonbit-community/flate",
+  "moonbitlang/core/encoding/utf8",
+}

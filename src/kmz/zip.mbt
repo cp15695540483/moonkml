@@ -17,7 +17,7 @@ pub(all) struct ZipEntry {
 
 ///|
 /// 读取小端 u16。
-fn read_u16(data : Bytes, at : Int32) -> Int32 raise KmlError {
+fn read_u16(data : Bytes, at : Int32) -> Int32 raise @core.KmlError {
   if at + 2 > data.length() {
     raise XmlSyntax("truncated zip u16", at)
   }
@@ -27,7 +27,7 @@ fn read_u16(data : Bytes, at : Int32) -> Int32 raise KmlError {
 
 ///|
 /// 读取小端 u32。
-fn read_u32(data : Bytes, at : Int32) -> Int32 raise KmlError {
+fn read_u32(data : Bytes, at : Int32) -> Int32 raise @core.KmlError {
   if at + 4 > data.length() {
     raise XmlSyntax("truncated zip u32", at)
   }
@@ -182,7 +182,7 @@ priv struct ZipRecord {
 
 ///|
 /// 枚举 ZIP 里的所有条目（按本地文件头顺序）。
-fn zip_records(data : Bytes) -> Array[ZipRecord] raise KmlError {
+fn zip_records(data : Bytes) -> Array[ZipRecord] raise @core.KmlError {
   let n = data.length()
   let out : Array[ZipRecord] = []
   let mut at = 0
@@ -218,7 +218,10 @@ fn zip_records(data : Bytes) -> Array[ZipRecord] raise KmlError {
 
 ///|
 /// 解出某条记录的内容（按需 inflate）。
-fn zip_record_data(data : Bytes, record : ZipRecord) -> Bytes raise KmlError {
+fn zip_record_data(
+  data : Bytes,
+  record : ZipRecord,
+) -> Bytes raise @core.KmlError {
   let raw = data.clamped_view(
     start=record.content_start,
     end=record.content_start + record.comp_size,
@@ -236,7 +239,7 @@ fn zip_record_data(data : Bytes, record : ZipRecord) -> Bytes raise KmlError {
 
 ///|
 /// 列出 KMZ/ZIP 里的全部条目名。
-pub fn kmz_entry_names(data : Bytes) -> Array[String] raise KmlError {
+pub fn kmz_entry_names(data : Bytes) -> Array[String] raise @core.KmlError {
   let records = zip_records(data)
   let out : Array[String] = []
   let mut i = 0
@@ -249,7 +252,7 @@ pub fn kmz_entry_names(data : Bytes) -> Array[String] raise KmlError {
 
 ///|
 /// 取出 KMZ/ZIP 里指定条目的内容。
-pub fn kmz_extract(data : Bytes, name : String) -> Bytes? raise KmlError {
+pub fn kmz_extract(data : Bytes, name : String) -> Bytes? raise @core.KmlError {
   let records = zip_records(data)
   let mut i = 0
   while i < records.length() {
@@ -263,15 +266,15 @@ pub fn kmz_extract(data : Bytes, name : String) -> Bytes? raise KmlError {
 
 ///|
 /// 从 ZIP 里找第一个指定名字的条目内容。
-pub fn zip_find(data : Bytes, name : String) -> Bytes? raise KmlError {
+pub fn zip_find(data : Bytes, name : String) -> Bytes? raise @core.KmlError {
   kmz_extract(data, name)
 }
 
 ///|
 /// 把 KML 文档与附加资源打包成 KMZ。
-pub fn kmz_pack_with(doc : KmlDocument, extra : Array[ZipEntry]) -> Bytes {
+pub fn kmz_pack_with(doc : @core.KmlDocument, extra : Array[ZipEntry]) -> Bytes {
   let entries : Array[ZipEntry] = [
-    { name: "doc.kml", data: @utf8.encode(serialize(doc)), },
+    { name: "doc.kml", data: @utf8.encode(@kml.serialize(doc)), },
   ]
   let mut i = 0
   while i < extra.length() {
@@ -283,22 +286,22 @@ pub fn kmz_pack_with(doc : KmlDocument, extra : Array[ZipEntry]) -> Bytes {
 
 ///|
 /// 把 KML 文档打包成 KMZ（仅含 doc.kml）。
-pub fn kmz_pack(doc : KmlDocument) -> Bytes {
+pub fn kmz_pack(doc : @core.KmlDocument) -> Bytes {
   kmz_pack_with(doc, [])
 }
 
 ///|
 /// 从 KMZ 字节解出 KML 文档：优先 doc.kml，缺失时取第一个 .kml 条目。
-pub fn kmz_parse(data : Bytes) -> KmlDocument raise KmlError {
+pub fn kmz_parse(data : Bytes) -> @core.KmlDocument raise @core.KmlError {
   match kmz_extract(data, "doc.kml") {
-    Some(kml) => parse(@utf8.decode_lossy(kml))
+    Some(kml) => @kml.parse(@utf8.decode_lossy(kml))
     None => {
       let names = kmz_entry_names(data)
       let mut i = 0
       while i < names.length() {
         if names[i].has_suffix(".kml") {
           match kmz_extract(data, names[i]) {
-            Some(kml) => return parse(@utf8.decode_lossy(kml))
+            Some(kml) => return @kml.parse(@utf8.decode_lossy(kml))
             None => ()
           }
         }

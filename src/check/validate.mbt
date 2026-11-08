@@ -12,7 +12,7 @@ pub(all) struct ValidationIssue {
 
 ///|
 /// 坐标是否在合法范围内。
-fn valid_position(p : KmlPoint) -> Bool {
+fn valid_position(p : @core.KmlPoint) -> Bool {
   !p.lon.is_nan() &&
   !p.lat.is_nan() &&
   !p.lon.is_inf() &&
@@ -25,7 +25,7 @@ fn valid_position(p : KmlPoint) -> Bool {
 
 ///|
 /// 两个点是否相同（按 1e-9 容差）。
-fn same_point(a : KmlPoint, b : KmlPoint) -> Bool {
+fn same_point(a : @core.KmlPoint, b : @core.KmlPoint) -> Bool {
   (a.lon - b.lon).abs() <= 1.0e-9 && (a.lat - b.lat).abs() <= 1.0e-9
 }
 
@@ -34,7 +34,7 @@ fn same_point(a : KmlPoint, b : KmlPoint) -> Bool {
 fn validate_points(
   label : String,
   kind : String,
-  points : Array[KmlPoint],
+  points : Array[@core.KmlPoint],
   min_count : Int32,
   out : Array[ValidationIssue],
 ) -> Unit {
@@ -68,7 +68,7 @@ fn validate_points(
 fn validate_ring(
   label : String,
   kind : String,
-  ring : LinearRing,
+  ring : @core.LinearRing,
   out : Array[ValidationIssue],
 ) -> Unit {
   validate_points(label, kind, ring.points, 4, out)
@@ -85,20 +85,20 @@ fn validate_ring(
 /// 校验一个几何。
 fn validate_geometry(
   label : String,
-  geometry : Geometry,
+  geometry : @core.Geometry,
   out : Array[ValidationIssue],
 ) -> Unit {
   match geometry {
-    Geometry::Point(p) =>
+    @core.Geometry::Point(p) =>
       if !valid_position(p) {
         out.push({
           placemark: label,
           message: "Point 坐标越界或非有限值",
         })
       }
-    Geometry::LineString(ls) =>
+    @core.Geometry::LineString(ls) =>
       validate_points(label, "LineString", ls.points, 2, out)
-    Geometry::Polygon(poly) => {
+    @core.Geometry::Polygon(poly) => {
       validate_ring(label, "Polygon 外环", poly.outer, out)
       let mut i = 0
       while i < poly.inner.length() {
@@ -111,14 +111,14 @@ fn validate_geometry(
         i = i + 1
       }
     }
-    Geometry::MultiGeometry(parts) => {
+    @core.Geometry::MultiGeometry(parts) => {
       let mut i = 0
       while i < parts.length() {
         validate_geometry(label, parts[i], out)
         i = i + 1
       }
     }
-    Geometry::GxTrack(track) => {
+    @core.Geometry::GxTrack(track) => {
       validate_points(label, "gx:Track", track.coords, 1, out)
       if track.whens.length() > 0 &&
         track.whens.length() != track.coords.length() {
@@ -137,7 +137,7 @@ fn validate_geometry(
 
 ///|
 /// 校验整个文档，返回全部问题（空数组表示通过）。
-pub fn validate(doc : KmlDocument) -> Array[ValidationIssue] {
+pub fn validate(doc : @core.KmlDocument) -> Array[ValidationIssue] {
   let out : Array[ValidationIssue] = []
   let mut i = 0
   while i < doc.placemarks.length() {

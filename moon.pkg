@@ -1,5 +1,7 @@
 import {
-  "moonbit-community/flate",
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
+  "cp15695540483/moonkml/src/check",
+  "cp15695540483/moonkml/src/core",
+  "cp15695540483/moonkml/src/formats",
+  "cp15695540483/moonkml/src/kml",
+  "cp15695540483/moonkml/src/kmz",
 }

@@ -47,7 +47,7 @@ fn json_field(obj : Map[String, Json], key : String) -> Json? {
 
 ///|
 /// 解析一个 GeoJSON position（[lon, lat] 或 [lon, lat, alt]）。
-fn position_from_json(value : Json) -> KmlPoint raise KmlError {
+fn position_from_json(value : Json) -> @core.KmlPoint raise @core.KmlError {
   match json_as_array(value) {
     None => raise BadGeoJson("position is not an array")
     Some(arr) => {
@@ -67,11 +67,13 @@ fn position_from_json(value : Json) -> KmlPoint raise KmlError {
 
 ///|
 /// 解析一串 position。
-fn positions_from_json(value : Json) -> Array[KmlPoint] raise KmlError {
+fn positions_from_json(
+  value : Json,
+) -> Array[@core.KmlPoint] raise @core.KmlError {
   match json_as_array(value) {
     None => raise BadGeoJson("coordinates is not an array")
     Some(arr) => {
-      let out : Array[KmlPoint] = []
+      let out : Array[@core.KmlPoint] = []
       let mut i = 0
       while i < arr.length() {
         out.push(position_from_json(arr[i]))
@@ -84,7 +86,7 @@ fn positions_from_json(value : Json) -> Array[KmlPoint] raise KmlError {
 
 ///|
 /// 解析 GeoJSON 几何成 KML 几何。
-fn geometry_from_json(value : Json) -> Geometry? raise KmlError {
+fn geometry_from_json(value : Json) -> @core.Geometry? raise @core.KmlError {
   match json_as_object(value) {
     None => raise BadGeoJson("geometry is not an object")
     Some(obj) => {
@@ -101,34 +103,38 @@ fn geometry_from_json(value : Json) -> Geometry? raise KmlError {
         None => raise BadGeoJson("geometry has no coordinates")
       }
       if kind == "Point" {
-        Some(Geometry::Point(position_from_json(coords)))
+        Some(@core.Geometry::Point(position_from_json(coords)))
       } else if kind == "LineString" {
-        Some(Geometry::LineString({ points: positions_from_json(coords), }))
+        Some(
+          @core.Geometry::LineString({ points: positions_from_json(coords), }),
+        )
       } else if kind == "Polygon" {
-        Some(Geometry::Polygon(polygon_from_json(coords)))
+        Some(@core.Geometry::Polygon(polygon_from_json(coords)))
       } else if kind == "MultiPoint" {
         let pts = positions_from_json(coords)
-        let parts : Array[Geometry] = []
+        let parts : Array[@core.Geometry] = []
         let mut i = 0
         while i < pts.length() {
-          parts.push(Geometry::Point(pts[i]))
+          parts.push(@core.Geometry::Point(pts[i]))
           i = i + 1
         }
-        Some(Geometry::MultiGeometry(parts))
+        Some(@core.Geometry::MultiGeometry(parts))
       } else if kind == "MultiLineString" {
         let lines = json_as_array(coords)
         match lines {
           None => raise BadGeoJson("MultiLineString coordinates invalid")
           Some(ls) => {
-            let parts : Array[Geometry] = []
+            let parts : Array[@core.Geometry] = []
             let mut i = 0
             while i < ls.length() {
               parts.push(
-                Geometry::LineString({ points: positions_from_json(ls[i]), }),
+                @core.Geometry::LineString({
+                  points: positions_from_json(ls[i]),
+                }),
               )
               i = i + 1
             }
-            Some(Geometry::MultiGeometry(parts))
+            Some(@core.Geometry::MultiGeometry(parts))
           }
         }
       } else if kind == "MultiPolygon" {
@@ -136,13 +142,13 @@ fn geometry_from_json(value : Json) -> Geometry? raise KmlError {
         match polys {
           None => raise BadGeoJson("MultiPolygon coordinates invalid")
           Some(ps) => {
-            let parts : Array[Geometry] = []
+            let parts : Array[@core.Geometry] = []
             let mut i = 0
             while i < ps.length() {
-              parts.push(Geometry::Polygon(polygon_from_json(ps[i])))
+              parts.push(@core.Geometry::Polygon(polygon_from_json(ps[i])))
               i = i + 1
             }
-            Some(Geometry::MultiGeometry(parts))
+            Some(@core.Geometry::MultiGeometry(parts))
           }
         }
       } else {
@@ -154,15 +160,15 @@ fn geometry_from_json(value : Json) -> Geometry? raise KmlError {
 
 ///|
 /// 解析 GeoJSON Polygon 的 coordinates：第一个环是外环，其余是内环。
-fn polygon_from_json(value : Json) -> KmlPolygon raise KmlError {
+fn polygon_from_json(value : Json) -> @core.KmlPolygon raise @core.KmlError {
   match json_as_array(value) {
     None => raise BadGeoJson("Polygon coordinates is not an array")
     Some(rings) => {
       if rings.length() == 0 {
         raise BadGeoJson("Polygon needs at least one ring")
       }
-      let outer : LinearRing = { points: positions_from_json(rings[0]), }
-      let inner : Array[LinearRing] = []
+      let outer : @core.LinearRing = { points: positions_from_json(rings[0]), }
+      let inner : Array[@core.LinearRing] = []
       let mut i = 1
       while i < rings.length() {
         inner.push({ points: positions_from_json(rings[i]), })
@@ -175,7 +181,7 @@ fn polygon_from_json(value : Json) -> KmlPolygon raise KmlError {
 
 ///|
 /// 解析一个 Feature。
-fn placemark_from_feature(value : Json) -> Placemark raise KmlError {
+fn placemark_from_feature(value : Json) -> @core.Placemark raise @core.KmlError {
   match json_as_object(value) {
     None => raise BadGeoJson("feature is not an object")
     Some(obj) => {
@@ -225,7 +231,7 @@ fn placemark_from_feature(value : Json) -> Placemark raise KmlError {
 
 ///|
 /// 从 GeoJSON 文本导入 KML 文档。
-pub fn from_geojson(text : String) -> KmlDocument raise KmlError {
+pub fn from_geojson(text : String) -> @core.KmlDocument raise @core.KmlError {
   let json = @json.parse(text) catch { _ => raise BadGeoJson("invalid JSON") }
   let obj = match json_as_object(json) {
     Some(o) => o
@@ -239,7 +245,7 @@ pub fn from_geojson(text : String) -> KmlDocument raise KmlError {
       }
     None => raise BadGeoJson("root has no type")
   }
-  let placemarks : Array[Placemark] = []
+  let placemarks : Array[@core.Placemark] = []
   if kind == "FeatureCollection" {
     match json_field(obj, "features") {
       Some(f) =>

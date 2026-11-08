@@ -8,7 +8,7 @@ test "imports waypoint" {
   assert_eq(doc.placemark_count(), 1)
   assert_eq(doc.placemarks[0].name, "P")
   match doc.placemarks[0].geometry {
-    Some(Geometry::Point(p)) => {
+    Some(@core.Geometry::Point(p)) => {
       assert_eq(p.lat, 39.9)
       assert_eq(p.lon, 116.4)
       match p.alt {
@@ -26,7 +26,7 @@ test "imports route as linestring" {
     "<gpx><rte><name>R</name><rtept lat=\"0\" lon=\"0\"/><rtept lat=\"1\" lon=\"1\"/></rte></gpx>",
   )
   match doc.placemarks[0].geometry {
-    Some(Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
+    Some(@core.Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
     _ => fail("expected line string")
   }
 }

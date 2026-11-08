@@ -2,7 +2,7 @@
 
 ///|
 /// 构造一个含三种几何的文档。
-fn sample_doc() -> KmlDocument {
+fn sample_doc() -> @core.KmlDocument {
   {
     name: "Round",
     styles: [],
@@ -11,7 +11,9 @@ fn sample_doc() -> KmlDocument {
       {
         name: "P",
         description: "a <b> & c",
-        geometry: Some(Geometry::Point({ lon: 1.5, lat: 2.5, alt: Some(3.0), })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.5, lat: 2.5, alt: Some(3.0), }),
+        ),
         style_url: "",
         extended_data: [],
         folder: "",
@@ -25,7 +27,7 @@ fn sample_doc() -> KmlDocument {
         folder: "",
         timestamp: None,
         geometry: Some(
-          Geometry::LineString({
+          @core.Geometry::LineString({
             points: [
               { lon: 0.0, lat: 0.0, alt: None, },
               { lon: 1.0, lat: 1.0, alt: None, },
@@ -41,7 +43,7 @@ fn sample_doc() -> KmlDocument {
         folder: "",
         timestamp: None,
         geometry: Some(
-          Geometry::Polygon({
+          @core.Geometry::Polygon({
             outer: {
               points: [
                 { lon: 0.0, lat: 0.0, alt: None, },
@@ -71,7 +73,7 @@ test "round-trip preserves point coordinates" {
   let text = serialize(sample_doc())
   let back = try! parse(text)
   match back.placemarks[0].geometry {
-    Some(Geometry::Point(p)) => {
+    Some(@core.Geometry::Point(p)) => {
       assert_eq(p.lon, 1.5)
       assert_eq(p.lat, 2.5)
       match p.alt {
@@ -88,7 +90,7 @@ test "round-trip preserves line string" {
   let text = serialize(sample_doc())
   let back = try! parse(text)
   match back.placemarks[1].geometry {
-    Some(Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
+    Some(@core.Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
     _ => fail("expected line string")
   }
 }
@@ -98,7 +100,7 @@ test "round-trip preserves polygon" {
   let text = serialize(sample_doc())
   let back = try! parse(text)
   match back.placemarks[2].geometry {
-    Some(Geometry::Polygon(poly)) => {
+    Some(@core.Geometry::Polygon(poly)) => {
       assert_eq(poly.outer.point_count(), 4)
       assert_eq(poly.inner_count(), 0)
     }
@@ -115,7 +117,7 @@ test "text is XML-escaped" {
 
 ///|
 test "empty geometry serializes to plain placemark" {
-  let doc : KmlDocument = {
+  let doc : @core.KmlDocument = {
     name: "",
     styles: [],
     style_maps: [],

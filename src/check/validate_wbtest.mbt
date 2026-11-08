@@ -2,7 +2,7 @@
 
 ///|
 /// 构造一个只含给定几何的文档。
-fn doc_with(geometry : Geometry?) -> KmlDocument {
+fn doc_with(geometry : @core.Geometry?) -> @core.KmlDocument {
   {
     name: "",
     styles: [],
@@ -24,7 +24,7 @@ fn doc_with(geometry : Geometry?) -> KmlDocument {
 ///|
 test "valid point passes" {
   let issues = validate(
-    doc_with(Some(Geometry::Point({ lon: 116.4, lat: 39.9, alt: None, }))),
+    doc_with(Some(@core.Geometry::Point({ lon: 116.4, lat: 39.9, alt: None, }))),
   )
   assert_eq(issues.length(), 0)
 }
@@ -32,14 +32,14 @@ test "valid point passes" {
 ///|
 test "out-of-range point is reported" {
   let issues = validate(
-    doc_with(Some(Geometry::Point({ lon: 200.0, lat: 39.9, alt: None, }))),
+    doc_with(Some(@core.Geometry::Point({ lon: 200.0, lat: 39.9, alt: None, }))),
   )
   assert_eq(issues.length(), 1)
 }
 
 ///|
 test "unclosed ring is reported" {
-  let ring : LinearRing = {
+  let ring : @core.LinearRing = {
     points: [
       { lon: 0.0, lat: 0.0, alt: None, },
       { lon: 1.0, lat: 0.0, alt: None, },
@@ -48,7 +48,7 @@ test "unclosed ring is reported" {
     ],
   }
   let issues = validate(
-    doc_with(Some(Geometry::Polygon({ outer: ring, inner: [], }))),
+    doc_with(Some(@core.Geometry::Polygon({ outer: ring, inner: [], }))),
   )
   assert_eq(issues.length(), 1)
 }
@@ -58,7 +58,9 @@ test "short line string is reported" {
   let issues = validate(
     doc_with(
       Some(
-        Geometry::LineString({ points: [{ lon: 0.0, lat: 0.0, alt: None, }], }),
+        @core.Geometry::LineString({
+          points: [{ lon: 0.0, lat: 0.0, alt: None, }],
+        }),
       ),
     ),
   )
@@ -73,17 +75,17 @@ test "missing geometry is reported" {
 
 ///|
 test "gx track timestamp mismatch is reported" {
-  let track : KmlGxTrack = {
+  let track : @core.KmlGxTrack = {
     whens: ["t0", "t1"],
     coords: [{ lon: 1.0, lat: 2.0, alt: None, }],
   }
-  let issues = validate(doc_with(Some(Geometry::GxTrack(track))))
+  let issues = validate(doc_with(Some(@core.Geometry::GxTrack(track))))
   assert_eq(issues.length(), 1)
 }
 
 ///|
 test "dangling style reference is reported" {
-  let doc : KmlDocument = {
+  let doc : @core.KmlDocument = {
     name: "",
     styles: [],
     style_maps: [],
@@ -91,7 +93,9 @@ test "dangling style reference is reported" {
       {
         name: "X",
         description: "",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, }),
+        ),
         style_url: "#missing",
         extended_data: [],
         folder: "",
@@ -105,7 +109,7 @@ test "dangling style reference is reported" {
 
 ///|
 test "resolvable style reference passes" {
-  let doc : KmlDocument = {
+  let doc : @core.KmlDocument = {
     name: "",
     styles: [
       {
@@ -124,7 +128,9 @@ test "resolvable style reference passes" {
       {
         name: "X",
         description: "",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, }),
+        ),
         style_url: "#s",
         extended_data: [],
         folder: "",

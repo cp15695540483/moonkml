@@ -65,7 +65,7 @@ test "parses deflate-compressed KMZ from simplekml" {
 test "oracle KMZ point and line match simplekml input" {
   let doc = try! kmz_parse(oracle_kmz_bytes())
   match doc.placemarks[0].geometry {
-    Some(Geometry::Point(p)) => {
+    Some(@core.Geometry::Point(p)) => {
       assert_eq(p.lon, 116.3975)
       assert_eq(p.lat, 39.9087)
       match p.alt {
@@ -76,7 +76,7 @@ test "oracle KMZ point and line match simplekml input" {
     _ => fail("expected point")
   }
   match doc.placemarks[1].geometry {
-    Some(Geometry::LineString(ls)) => assert_eq(ls.point_count(), 3)
+    Some(@core.Geometry::LineString(ls)) => assert_eq(ls.point_count(), 3)
     _ => fail("expected line string")
   }
 }

@@ -8,7 +8,7 @@ test "imports FeatureCollection with point and linestring" {
   assert_eq(doc.placemark_count(), 2)
   assert_eq(doc.placemarks[0].name, "P")
   match doc.placemarks[0].geometry {
-    Some(Geometry::Point(p)) => {
+    Some(@core.Geometry::Point(p)) => {
       assert_eq(p.lon, 116.4)
       assert_eq(p.lat, 39.9)
       match p.alt {
@@ -19,7 +19,7 @@ test "imports FeatureCollection with point and linestring" {
     _ => fail("expected point")
   }
   match doc.placemarks[1].geometry {
-    Some(Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
+    Some(@core.Geometry::LineString(ls)) => assert_eq(ls.point_count(), 2)
     _ => fail("expected line string")
   }
 }
@@ -30,7 +30,7 @@ test "imports polygon with hole" {
     "{\"type\":\"Feature\",\"properties\":{\"name\":\"Z\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[4,0],[4,4],[0,0]],[[1,1],[2,1],[2,2],[1,1]]]}}",
   )
   match doc.placemarks[0].geometry {
-    Some(Geometry::Polygon(poly)) => {
+    Some(@core.Geometry::Polygon(poly)) => {
       assert_eq(poly.outer.point_count(), 4)
       assert_eq(poly.inner_count(), 1)
     }
@@ -44,7 +44,7 @@ test "imports multi geometry" {
     "{\"type\":\"MultiPoint\",\"coordinates\":[[1,2],[3,4]]}",
   )
   match doc.placemarks[0].geometry {
-    Some(Geometry::MultiGeometry(parts)) => assert_eq(parts.length(), 2)
+    Some(@core.Geometry::MultiGeometry(parts)) => assert_eq(parts.length(), 2)
     _ => fail("expected multi geometry")
   }
 }
@@ -69,4 +69,35 @@ test "invalid geojson raises" {
     _ => false
   }
   assert_eq(failed, true)
+}
+
+///|
+test "gx track exports to geojson linestring and gpx track" {
+  let track : @core.KmlGxTrack = {
+    whens: [],
+    coords: [
+      { lon: 1.0, lat: 2.0, alt: None, },
+      { lon: 3.0, lat: 4.0, alt: None, },
+    ],
+  }
+  let doc : @core.KmlDocument = {
+    name: "",
+    styles: [],
+    style_maps: [],
+    placemarks: [
+      {
+        name: "T",
+        description: "",
+        geometry: Some(@core.Geometry::GxTrack(track)),
+        style_url: "",
+        extended_data: [],
+        folder: "",
+        timestamp: None,
+      },
+    ],
+  }
+  let gj = @utf8.encode(to_geojson(doc))
+  assert_eq(gj.find(b"\"LineString\"") != None, true)
+  let gx = @utf8.encode(to_gpx(doc))
+  assert_eq(gx.find(b"<trkseg>") != None, true)
 }

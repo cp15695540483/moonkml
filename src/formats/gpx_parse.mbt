@@ -5,17 +5,19 @@
 
 ///|
 /// 从 wpt/rtept/trkpt 元素读一个点（lat/lon 属性 + 可选 ele）。
-fn point_from_gpx(elem : XmlElement) -> KmlPoint raise KmlError {
+fn point_from_gpx(
+  elem : @core.XmlElement,
+) -> @core.KmlPoint raise @core.KmlError {
   let lat = match elem.attr("lat") {
-    Some(v) => parse_double(trim_text(v))
+    Some(v) => @core.parse_double(@core.trim_text(v))
     None => raise BadGpx("missing lat")
   }
   let lon = match elem.attr("lon") {
-    Some(v) => parse_double(trim_text(v))
+    Some(v) => @core.parse_double(@core.trim_text(v))
     None => raise BadGpx("missing lon")
   }
-  let alt = match first_element(elem, "ele") {
-    Some(e) => parse_double(trim_text(e.text()))
+  let alt = match @core.first_element(elem, "ele") {
+    Some(e) => @core.parse_double(@core.trim_text(e.text()))
     None => None
   }
   match (lon, lat) {
@@ -27,10 +29,10 @@ fn point_from_gpx(elem : XmlElement) -> KmlPoint raise KmlError {
 ///|
 /// 读一组子点（rtept / trkpt）。
 fn points_from_gpx(
-  elem : XmlElement,
+  elem : @core.XmlElement,
   child_name : String,
-) -> Array[KmlPoint] raise KmlError {
-  let out : Array[KmlPoint] = []
+) -> Array[@core.KmlPoint] raise @core.KmlError {
+  let out : Array[@core.KmlPoint] = []
   let mut i = 0
   while i < elem.children.length() {
     match elem.children[i] {
@@ -47,18 +49,18 @@ fn points_from_gpx(
 
 ///|
 /// 读一个 GPX 名称子元素。
-fn name_from_gpx(elem : XmlElement) -> String {
-  match first_element(elem, "name") {
-    Some(n) => trim_text(n.text())
+fn name_from_gpx(elem : @core.XmlElement) -> String {
+  match @core.first_element(elem, "name") {
+    Some(n) => @core.trim_text(n.text())
     None => ""
   }
 }
 
 ///|
 /// 从 GPX 文本导入 KML 文档。
-pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
-  let root = parse_xml(text)
-  let placemarks : Array[Placemark] = []
+pub fn from_gpx(text : String) -> @core.KmlDocument raise @core.KmlError {
+  let root = @core.parse_xml(text)
+  let placemarks : Array[@core.Placemark] = []
   if root.name != "gpx" {
     raise BadGpx("root element is not gpx")
   }
@@ -70,7 +72,7 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
           placemarks.push({
             name: name_from_gpx(child),
             description: "",
-            geometry: Some(Geometry::Point(point_from_gpx(child))),
+            geometry: Some(@core.Geometry::Point(point_from_gpx(child))),
             style_url: "",
             extended_data: [],
             folder: "",
@@ -82,7 +84,7 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
             placemarks.push({
               name: name_from_gpx(child),
               description: "",
-              geometry: Some(Geometry::LineString({ points: pts, })),
+              geometry: Some(@core.Geometry::LineString({ points: pts, })),
               style_url: "",
               extended_data: [],
               folder: "",
@@ -90,7 +92,7 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
             })
           }
         } else if child.name == "trk" {
-          let segs : Array[Array[KmlPoint]] = []
+          let segs : Array[Array[@core.KmlPoint]] = []
           let mut k = 0
           while k < child.children.length() {
             match child.children[k] {
@@ -109,23 +111,23 @@ pub fn from_gpx(text : String) -> KmlDocument raise KmlError {
             placemarks.push({
               name: name_from_gpx(child),
               description: "",
-              geometry: Some(Geometry::LineString({ points: segs[0], })),
+              geometry: Some(@core.Geometry::LineString({ points: segs[0], })),
               style_url: "",
               extended_data: [],
               folder: "",
               timestamp: None,
             })
           } else if segs.length() > 1 {
-            let parts : Array[Geometry] = []
+            let parts : Array[@core.Geometry] = []
             let mut s = 0
             while s < segs.length() {
-              parts.push(Geometry::LineString({ points: segs[s], }))
+              parts.push(@core.Geometry::LineString({ points: segs[s], }))
               s = s + 1
             }
             placemarks.push({
               name: name_from_gpx(child),
               description: "",
-              geometry: Some(Geometry::MultiGeometry(parts)),
+              geometry: Some(@core.Geometry::MultiGeometry(parts)),
               style_url: "",
               extended_data: [],
               folder: "",

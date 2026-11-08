@@ -1,0 +1,4 @@
+import {
+  "cp15695540483/moonkml/src/core",
+  "moonbitlang/core/encoding/utf8",
+}

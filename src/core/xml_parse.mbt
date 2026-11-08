@@ -1,85 +1,4 @@
-// 一个只覆盖 KML 需要的最小 XML 解析器。
-//
-// KML 文档是 XML 的一个方言：元素、属性、文本、CDATA、注释、处理指令与实体引用
-// 就够用，不需要 DTD 实体展开或命名空间解析。这里按字节扫描，避免把 UTF-8
-// 文本按字符索引带来的边界问题。
-
-///|
-/// 一个 XML 属性。
-pub(all) struct XmlAttr {
-  name : String
-  value : String
-}
-
-///|
-/// XML 节点：元素或文本。
-pub(all) enum XmlNode {
-  Element(XmlElement)
-  Text(String)
-}
-
-///|
-/// 一个 XML 元素。
-pub(all) struct XmlElement {
-  name : String
-  attrs : Array[XmlAttr]
-  children : Array[XmlNode]
-}
-
-///|
-/// 读取元素上第一个同名属性，没有则返回 None。
-pub fn XmlElement::attr(self : XmlElement, name : String) -> String? {
-  let mut i = 0
-  while i < self.attrs.length() {
-    if self.attrs[i].name == name {
-      return Some(self.attrs[i].value)
-    }
-    i = i + 1
-  }
-  None
-}
-
-///|
-/// 子元素中第一个同名的元素。
-pub fn XmlElement::child(self : XmlElement, name : String) -> XmlElement? {
-  let mut i = 0
-  while i < self.children.length() {
-    match self.children[i] {
-      Element(e) => if e.name == name { return Some(e) }
-      Text(_) => ()
-    }
-    i = i + 1
-  }
-  None
-}
-
-///|
-/// 直接文本子节点拼接后的内容（不含子元素内部的文本）。
-pub fn XmlElement::text(self : XmlElement) -> String {
-  let out : Array[Byte] = []
-  let mut i = 0
-  while i < self.children.length() {
-    match self.children[i] {
-      Text(t) => {
-        let encoded = @utf8.encode(t)
-        let mut k = 0
-        while k < encoded.length() {
-          out.push(encoded[k])
-          k = k + 1
-        }
-      }
-      Element(_) => ()
-    }
-    i = i + 1
-  }
-  @utf8.decode_lossy(Bytes::from_array(out))
-}
-
-///|
-/// 该字节是否是空白。
-fn is_space(b : Byte) -> Bool {
-  b == b' ' || b == b'\t' || b == b'\n' || b == b'\r'
-}
+// XML 子集解析器：元素、属性、文本、CDATA、注释、处理指令、实体引用。
 
 ///|
 /// 该字节是否可以出现在元素名或属性名里（KML 只用 ASCII 名字）。
@@ -150,29 +69,9 @@ fn read_name(data : Bytes, from : Int32) -> (String, Int32) raise KmlError {
 
 ///|
 /// ASCII 十六进制数字的值，非数字返回 -1。
-fn hex_digit(b : Byte) -> Int32 {
-  let v = b.to_int()
-  if v >= 48 && v <= 57 {
-    v - 48
-  } else if v >= 97 && v <= 102 {
-    v - 87
-  } else if v >= 65 && v <= 70 {
-    v - 55
-  } else {
-    -1
-  }
-}
 
 ///|
 /// 十进制数字的值，非数字返回 -1。
-fn dec_digit(b : Byte) -> Int32 {
-  let v = b.to_int()
-  if v >= 48 && v <= 57 {
-    v - 48
-  } else {
-    -1
-  }
-}
 
 ///|
 /// 把一个 Unicode 码点按 UTF-8 追加到字节数组。

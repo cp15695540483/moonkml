@@ -2,7 +2,7 @@
 
 ///|
 /// 一个含点、线、面的文档。
-fn geo_sample_doc() -> KmlDocument {
+fn geo_sample_doc() -> @core.KmlDocument {
   {
     name: "Geo",
     styles: [],
@@ -11,7 +11,9 @@ fn geo_sample_doc() -> KmlDocument {
       {
         name: "P",
         description: "point",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, }),
+        ),
         style_url: "",
         extended_data: [],
         folder: "",
@@ -21,7 +23,7 @@ fn geo_sample_doc() -> KmlDocument {
         name: "L",
         description: "",
         geometry: Some(
-          Geometry::LineString({
+          @core.Geometry::LineString({
             points: [
               { lon: 0.0, lat: 0.0, alt: None, },
               { lon: 1.0, lat: 1.0, alt: None, },
@@ -37,7 +39,7 @@ fn geo_sample_doc() -> KmlDocument {
         name: "G",
         description: "",
         geometry: Some(
-          Geometry::Polygon({
+          @core.Geometry::Polygon({
             outer: {
               points: [
                 { lon: 0.0, lat: 0.0, alt: None, },
@@ -87,7 +89,7 @@ test "geojson contains point coordinates" {
 
 ///|
 test "geojson escapes quotes in name" {
-  let doc : KmlDocument = {
+  let doc : @core.KmlDocument = {
     name: "",
     styles: [],
     style_maps: [],

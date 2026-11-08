@@ -2,7 +2,7 @@
 
 ///|
 /// 一个简单文档。
-fn kmz_sample_doc() -> KmlDocument {
+fn kmz_sample_doc() -> @core.KmlDocument {
   {
     name: "KMZ",
     styles: [],
@@ -11,7 +11,9 @@ fn kmz_sample_doc() -> KmlDocument {
       {
         name: "P",
         description: "",
-        geometry: Some(Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, })),
+        geometry: Some(
+          @core.Geometry::Point({ lon: 1.0, lat: 2.0, alt: None, }),
+        ),
         style_url: "",
         extended_data: [],
         folder: "",
@@ -45,7 +47,7 @@ test "kmz round-trips document" {
   assert_eq(back.name, "KMZ")
   assert_eq(back.placemark_count(), 1)
   match back.placemarks[0].geometry {
-    Some(Geometry::Point(p)) => {
+    Some(@core.Geometry::Point(p)) => {
       assert_eq(p.lon, 1.0)
       assert_eq(p.lat, 2.0)
     }
