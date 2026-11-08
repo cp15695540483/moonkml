@@ -55,6 +55,10 @@ fn run_cli(args : Array[String]) -> Int32 {
       }
       return if issues.length() == 0 { 0 } else { 1 }
     }
+    if mode == "--kml" {
+      println(@kml.serialize(doc))
+      return 0
+    }
     if mode == "--geojson" {
       println(@kml.to_geojson(doc))
     } else if mode == "--gpx" {

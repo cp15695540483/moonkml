@@ -62,19 +62,28 @@ let bytes = @kml.kmz_pack(doc)             // 打包为 KMZ
 
 ### 导出
 
+四种格式两两互通（KML、KMZ、GeoJSON、GPX）：
+
 ```moonbit
-let geojson = @kml.to_geojson(doc)
-let gpx = @kml.to_gpx(doc)
-let kml_text = @kml.serialize(doc)
+let kml_text = @kml.serialize(doc)   // KML
+let kmz = @kml.kmz_pack(doc)         // KMZ
+let geojson = @kml.to_geojson(doc)   // GeoJSON
+let gpx = @kml.to_gpx(doc)           // GPX
+
+let doc2 = try! @kml.from_geojson(geojson_text)
+let doc3 = try! @kml.from_gpx(gpx_text)
+let doc4 = try! @kml.kmz_parse(kmz_bytes)
 ```
 
 ### 命令行
 
 ```bash
+# 输入可以是 .kml / .kmz / .geojson / .gpx
 moon run cmd/main -- examples/sample.kml --summary
-moon run cmd/main -- examples/sample.kml --geojson
-moon run cmd/main -- examples/sample.kml --gpx
-moon run cmd/main -- examples/sample.kml --validate
+moon run cmd/main -- examples/oracle.kmz --kml
+moon run cmd/main -- examples/sample.gpx --geojson
+moon run cmd/main -- examples/sample.geojson --gpx
+moon run cmd/main -- examples/negative/broken.kml --validate   # 退出码 1
 ```
 
 ## API 摘要
@@ -93,34 +102,47 @@ moon run cmd/main -- examples/sample.kml --validate
 - `Geometry::{ Point(KmlPoint), LineString(KmlLineString), Polygon(KmlPolygon), MultiGeometry(Array[Geometry]), GxTrack(KmlGxTrack) }`
 - `KmlPolygon::{ outer, inner, inner_count() }`、`KmlStyle::{ id, line_color, line_width, fill_color }`
 
-## 设计说明
+## 读写不变式
 
-- **XML 子集**：KML 只需要元素、属性、文本、CDATA、注释、处理指令与常见实体引用；不实现 DTD 实体展开与命名空间解析，未知元素直接忽略（KML 允许扩展元素）。
-- **错误模型**：`KmlError` 区分 XML 结构错误（带字节偏移）、KML 语义错误（缺 `coordinates`、坐标非法）与宿主 I/O 错误，便于调用方给出可定位的报错。
-- **坐标解析**：单次除法/乘法做十进制定标，避免逐位缩放带来的多次舍入；测试用 1e-9 容差断言。
-- **ZIP 策略**：读取支持 Stored 与 DEFLATE（DEFLATE 解压复用 `moonbit-community/flate`，纯 MoonBit）；写入使用 DEFLATE + CRC32。
+这几条是库对外承诺的，测试逐条覆盖：
 
-## 演示视频
+- **往返守恒**：`parse(serialize(doc))` 后 placemarks / styles / style_maps 数量与几何种类不变；`tools/roundtrip_check.py` 在 CI 里盯这条。
+- **坐标不被改写**：序列化用最短可往返的 Double 表示，不截断精度；`116.3975` 进出仍是 `116.3975`。
+- **未知元素不致命**：KML 允许厂商扩展，遇到未建模元素忽略而非报错，但**不静默改写**已识别数据。
+- **坏数据不被伪装成好数据**：解析宽松（真实数据常有未闭合环），`validate` 报告问题且 CLI 退出码为 1。
 
-[docs/demo.mp4](docs/demo.mp4)（23 秒）：真实执行 CLI、bench 与 test，展示
+## KML / KMZ 的五个坑
 
-1. 读取 simplekml 生成的真实 KMZ（DEFLATE）
-2. 导入 GPX 1.1
-3. 导出 GeoJSON
-4. 校验正常文档
-5. 校验发现环未闭合的坏数据
-6. 解析 1000 个点约 5 ms
-7. 74 个测试全绿
+这些是照规范实现时真正卡住过的地方，也是本库与「能解析 XML」之间的差别：
 
-视频由 `tools/record_demo.py` 生成（真实执行命令、捕获输出、渲染终端画面、ffmpeg 编码），可重复录制：
+1. **真实 KMZ 几乎都是 DEFLATE**。只实现 Stored 时，对 simplekml 生成的 394 字节 KMZ 直接报 `unsupported zip compression`；补上 inflate 后同一文件解出 2 个 Placemark。规范说 doc.kml 应在 ZIP 根，但够宽松的读取器要能在缺失时回退到首个 `.kml`。
+2. **`<coordinates>` 与 `<gx:coord>` 是两套语法**。前者把 `lon,lat[,alt]` 用空白分隔成元组，后者直接把 `lon lat alt` 用空格分开；共用解析器会在 `gx:Track` 上解析失败。
+3. **`<LinearRing>` 要求首尾点闭合、至少 4 点**，但真实数据经常不闭合，Google Earth 照样渲染。所以解析不能拒绝，`validate` 必须报告——「宽松解析 + 严格校验」是两件事。
+4. **KML 颜色是 `aabbggrr`**：alpha 在最前，蓝绿红倒序，与 CSS 的 `#rrggbbaa` 正好相反。本库只做原样保留、不做 RGBA 转换，因为任何自动转换都会在 alpha 语义上引入错误解释。
+5. **`<Folder>` 的层级在拍平后不可恢复**。文件里 Placemark 是深度优先顺序，丢了层级就无法还原目录树；因此每个 Placemark 记录 `folder = "A/B"` 路径。
+
+## 验证
+
+本地三关（CI 逐步执行同样的命令）：
 
 ```bash
-python tools/record_demo.py --ffmpeg <ffmpeg 路径>
+moon fmt --check
+moon check --target wasm-gc --deny-warn
+moon test --target wasm-gc && moon test --target js && moon test --target native
 ```
+
+领域门禁（普通 MoonBit 项目不需要，这里是必需的）：
+
+```bash
+python tools/roundtrip_check.py   # 双后端输出逐字节一致 + 往返守恒
+python tools/gen_oracle.py        # 用 simplekml 生成独立实现产物
+```
+
+CI 在 wasm-gc / js / native 三后端各跑 74 个用例，然后做跨后端一致性、与 simplekml 对拍、坏数据断言与导出产物形状检查。跨后端一致性是重点：坐标是 Double，wasm-gc 与 js 的格式化并非同一份实现，只跑一个后端会漏掉 `116.39750000000001` 这类偏差。
 
 ## 性能
 
-`moon bench benchmarks --target wasm-gc --release`（本机 Windows，wasm-gc release）：
+```moon bench benchmarks --target wasm-gc --release```（本机 Windows）：
 
 | 用例 | 平均耗时 |
 | --- | --- |
@@ -129,25 +151,26 @@ python tools/record_demo.py --ffmpeg <ffmpeg 路径>
 | KMZ 打包（200 点） | 2.28 ms |
 | KMZ 解包（200 点） | 1.04 ms |
 
-## 覆盖范围
+## 演示视频
 
-元素级的支持矩阵见 [docs/KML-COVERAGE.md](docs/KML-COVERAGE.md)。
+[docs/demo.mp4](docs/demo.mp4)（23 秒）：真实执行 CLI、bench 与 test，依次展示读真实 KMZ、导入 GPX、导出 GeoJSON、校验正常与坏数据、解析 1000 点耗时、测试全绿。
 
-## 构建与测试
+视频由 `tools/record_demo.py` 生成（真实执行命令、捕获输出、渲染终端画面、ffmpeg 编码），可重复录制：
 
 ```bash
-moon check --target wasm-gc --deny-warn
-moon test --target wasm-gc
-moon test --target js
-moon fmt --check
+python tools/record_demo.py --ffmpeg <ffmpeg 路径>
 ```
 
-## 许可证
+## 覆盖范围
+
+元素级支持矩阵见 [docs/KML-COVERAGE.md](docs/KML-COVERAGE.md)，含「明确不做」的部分（Camera / NetworkLink / GroundOverlay / Model / 渲染语义 / gx:Tour）。
+
+## 许可与依据
 
 Apache-2.0，见 [LICENSE](LICENSE)。
 
-## 参考
+规范依据：OGC KML 2.2、RFC 7946（GeoJSON）、GPX 1.1 Schema、RFC 1951（DEFLATE）。
 
-- OGC KML 2.2 标准
-- RFC 7946（GeoJSON）、GPX 1.1 Schema
-- `moonbit-community/flate`（DEFLATE 引擎，Apache-2.0）
+依赖：`moonbit-community/flate` 0.10.0（DEFLATE 解压，Apache-2.0）与 `moonbitlang/x` 0.5.7（文件 I/O，Apache-2.0）。
+
+对拍素材 `examples/oracle.kml` / `oracle.kmz` 由 simplekml 1.3.2 在本地生成（`tools/gen_oracle.py` 可复现），仅作测试输入，源码未并入、未链接。

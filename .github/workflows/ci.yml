@@ -7,12 +7,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-build-test:
+  verify:
     runs-on: ubuntu-latest
     steps:
+      # ---------- 工具链 ----------
       - uses: actions/checkout@v5
 
-      - name: 安装 Node（js 后端测试需要）
+      - name: js 后端需要 Node
         uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -22,54 +23,65 @@ jobs:
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
-      - name: MoonBit 版本
-        run: moon version
+      - name: 记录工具链版本（失败时用于复现）
+        run: moon version --all
 
-      - name: 更新注册表索引
-        run: moon update
+      - run: moon update
 
-      - name: 格式检查
+      # ---------- 门禁 ----------
+      - name: 格式
         run: moon fmt --check
 
-      - name: 检查（警告即失败）
+      - name: 类型检查（警告即错误）
         run: moon check --target wasm-gc --deny-warn
 
       - name: 构建
         run: moon build --target wasm-gc
 
-      - name: 单元测试（wasm-gc）
+      # ---------- 三后端测试 ----------
+      # 坐标是 Double，格式化在 wasm-gc 与 js 上并非同一份实现，
+      # 因此测试必须在两个后端都跑，而不是只跑主后端。
+      - name: 测试 wasm-gc
         run: moon test --target wasm-gc
 
-      - name: 单元测试（js）
+      - name: 测试 js
         run: moon test --target js
 
-      - name: 单元测试（native）
+      - name: 测试 native
         run: moon test --target native
 
-      - name: 基准测试（冒烟）
-        run: moon bench benchmarks --target wasm-gc --release
+      # ---------- KML 领域验证 ----------
+      - name: 跨后端输出一致性与往返守恒
+        run: python3 tools/roundtrip_check.py
 
-      - name: 安装 Python 对拍工具
-        run: python3 -m pip install --quiet simplekml
-
-      - name: 用 simplekml 生成独立实现的 KML/KMZ
-        run: python3 tools/gen_oracle.py
-
-      - name: 端到端：解析第三方 KML 与 KMZ
+      - name: 与独立实现 simplekml 对拍
         run: |
-          moon run cmd/main --target wasm-gc -- examples/oracle.kml --summary
-          moon run cmd/main --target wasm-gc -- examples/oracle.kmz --summary
+          python3 -m pip install --quiet simplekml
+          python3 tools/gen_oracle.py
+          out=$(moon run cmd/main --target wasm-gc -- examples/oracle.kmz --summary)
+          echo "$out"
+          echo "$out" | grep -qx "document: OracleDoc"
+          echo "$out" | grep -qx "placemarks: 2"
+          echo "$out" | grep -qx "P1 -> point 116.3975, 39.9087"
+          echo "$out" | grep -qx "L1 -> line 3 vertices"
 
-      - name: 端到端：坏数据应被校验拦下
+      - name: 坏数据必须被校验拦下且退出码为 1
         run: |
           set +e
           out=$(moon run cmd/main --target wasm-gc -- examples/negative/broken.kml --validate)
           code=$?
           echo "$out"
           test $code -eq 1
-          echo "$out" | grep -q "ISSUE"
+          echo "$out" | grep -q "^ISSUE"
+          echo "$out" | grep -q "首尾点不闭合"
 
-      - name: 端到端：GeoJSON / GPX 导出非空
+      - name: 三种导出格式的产物形状
         run: |
-          moon run cmd/main --target wasm-gc -- examples/oracle.kml --geojson | grep -q '"type":"FeatureCollection"'
-          moon run cmd/main --target wasm-gc -- examples/oracle.kml --gpx | grep -q '<gpx'
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --kml | grep -q "<kml "
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --geojson > /tmp/out.geojson
+          python3 -c "import json;d=json.load(open(\"/tmp/out.geojson\"));assert d[\"type\"]==\"FeatureCollection\";assert len(d[\"features\"])==2"
+          moon run cmd/main --target wasm-gc -- examples/oracle.kml --gpx | grep -q "<gpx "
+
+      # ---------- 性能 ----------
+      - name: 基准（非门禁，仅记录）
+        run: moon bench benchmarks --target wasm-gc --release
