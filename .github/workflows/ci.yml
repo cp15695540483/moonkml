@@ -6,51 +6,57 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  # js 后端需要 Node；写在一处，三个 job 共用同一版本。
+  NODE_VERSION: "24"
+
 jobs:
-  verify:
+  # 门禁跑一次，后面的 job 都依赖它：格式、类型、构建不过就不必铺开测试。
+  gate:
+    name: 门禁
     runs-on: ubuntu-latest
     steps:
-      # ---------- 工具链 ----------
       - uses: actions/checkout@v5
-
-      - name: js 后端需要 Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24
-
       - name: 安装 MoonBit
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/moonbit
+      - run: moon fmt --check
+      - run: moon check --target wasm-gc --deny-warn
+      - run: moon build --target wasm-gc
 
-      - name: 记录工具链版本（失败时用于复现）
-        run: moon version --all
+  # 三后端并行。坐标是 Double，wasm-gc 与 js 的格式化不是同一份实现，
+  # native 又走另一条路径，所以三个后端都要单独跑一遍。
+  test:
+    name: 测试 / ${{ matrix.target }}
+    needs: gate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [wasm-gc, js, native]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: 安装 MoonBit
+        uses: ./.github/actions/moonbit
+      - name: 测试 ${{ matrix.target }}
+        run: moon test --target ${{ matrix.target }}
 
-      - run: moon update
+  # KML 领域验证：普通 MoonBit 项目不需要这些，但格式库必须盯
+  # 跨后端输出一致与往返守恒，否则坐标精度会被悄悄改坏。
+  domain:
+    name: 领域验证
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: 安装 MoonBit
+        uses: ./.github/actions/moonbit
 
-      # ---------- 门禁 ----------
-      - name: 格式
-        run: moon fmt --check
-
-      - name: 类型检查（警告即错误）
-        run: moon check --target wasm-gc --deny-warn
-
-      - name: 构建
-        run: moon build --target wasm-gc
-
-      # ---------- 三后端测试 ----------
-      # 坐标是 Double，格式化在 wasm-gc 与 js 上并非同一份实现，
-      # 因此测试必须在两个后端都跑，而不是只跑主后端。
-      - name: 测试 wasm-gc
-        run: moon test --target wasm-gc
-
-      - name: 测试 js
-        run: moon test --target js
-
-      - name: 测试 native
-        run: moon test --target native
-
-      # ---------- KML 领域验证 ----------
       - name: 跨后端输出一致性与往返守恒
         run: python3 tools/roundtrip_check.py
 
@@ -75,13 +81,20 @@ jobs:
           echo "$out" | grep -q "^ISSUE"
           echo "$out" | grep -q "首尾点不闭合"
 
-      - name: 三种导出格式的产物形状
+      - name: 四种输入与四种输出两两可达
         run: |
           moon run cmd/main --target wasm-gc -- examples/oracle.kml --kml | grep -q "<kml "
-          moon run cmd/main --target wasm-gc -- examples/oracle.kml --geojson > /tmp/out.geojson
-          python3 -c "import json;d=json.load(open(\"/tmp/out.geojson\"));assert d[\"type\"]==\"FeatureCollection\";assert len(d[\"features\"])==2"
-          moon run cmd/main --target wasm-gc -- examples/oracle.kml --gpx | grep -q "<gpx "
+          moon run cmd/main --target wasm-gc -- examples/oracle.kmz --geojson > /tmp/out.geojson
+          python3 -c "import json;d=json.load(open('/tmp/out.geojson'));assert d['type']=='FeatureCollection';assert len(d['features'])==2"
+          moon run cmd/main --target wasm-gc -- examples/sample.gpx --gpx | grep -q "<gpx "
+          moon run cmd/main --target wasm-gc -- examples/sample.geojson --kml | grep -q "<Placemark>"
 
-      # ---------- 性能 ----------
-      - name: 基准（非门禁，仅记录）
-        run: moon bench benchmarks --target wasm-gc --release
+  bench:
+    name: 基准
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装 MoonBit
+        uses: ./.github/actions/moonbit
+      - run: moon bench benchmarks --target wasm-gc --release

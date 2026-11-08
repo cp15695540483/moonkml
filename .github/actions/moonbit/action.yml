@@ -1,0 +1,13 @@
+name: 安装 MoonBit
+description: 装工具链并刷新注册表索引
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+        echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+    - shell: bash
+      run: moon version --all
+    - shell: bash
+      run: moon update
